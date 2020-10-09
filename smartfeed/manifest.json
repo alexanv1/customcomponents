@@ -1,0 +1,8 @@
+{
+    "domain": "smartfeed",
+    "name": "PetSafe SmartFeed",
+    "documentation": "https://www.petsafe.net/",
+    "requirements": [],
+    "dependencies": [],
+    "codeowners": []
+  }

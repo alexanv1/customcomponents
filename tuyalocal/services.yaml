@@ -1,0 +1,14 @@
+set_diffuser_mist_mode:
+  # Description of the service
+  description: Sets diffuser mist mode.
+  # Different fields that your service accepts
+  fields:
+    # Key of the field
+    entity_id:
+      # Description of the field
+      description: Name(s) of the entities to set
+      # Example value that can be passed for this field
+      example: 'switch.kitchen_essential_oil_diffuser'
+    mode:
+      description: Mist mode
+      example: 'continuous'

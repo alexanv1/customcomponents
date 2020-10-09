@@ -1,0 +1,8 @@
+{
+    "domain": "autopi",
+    "name": "AutoPi",
+    "documentation": "https://my.autopi.io",
+    "requirements": [],
+    "dependencies": [],
+    "codeowners": []
+  }

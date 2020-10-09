@@ -1,0 +1,11 @@
+{
+    "domain": "moodo",
+    "name": "Moodo",
+    "documentation": "https://rest.moodo.co/",
+    "requirements": [
+      "python-socketio==4.4.0",
+      "websocket-client==0.57.0"
+    ],
+    "dependencies": [],
+    "codeowners": []
+  }

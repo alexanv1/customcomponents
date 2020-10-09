@@ -1,0 +1,8 @@
+{
+    "domain": "tuyalocal",
+    "name": "Tuya Local Control",
+    "documentation": "https://www.home-assistant.io/components/tuya",
+    "requirements": [],
+    "dependencies": [],
+    "codeowners": []
+  }
