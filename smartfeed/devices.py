@@ -152,6 +152,20 @@ class DeviceSmartFeed:
             return 'unknown'
 
     @property
+    def battery_level_int(self):
+        """The feeder's current battery level as an integer."""
+        if not self.data['is_batteries_installed']:
+            return 0
+
+        minVoltage = 22755
+        maxVoltage = 29100
+
+        # Respect max and min bounds
+        voltage = max(min(self.data['battery_voltage'], maxVoltage), minVoltage)
+
+        return round(100 * (voltage - minVoltage) / (maxVoltage - minVoltage))
+
+    @property
     def available(self):
         """If true, the feeder is connected\available."""
         return self.data['connection_status'] == 2

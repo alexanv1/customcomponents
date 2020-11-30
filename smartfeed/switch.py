@@ -76,7 +76,8 @@ class SmartFeedDevice(SwitchEntity):
     def device_state_attributes(self):
         data = self._feeder.data_json
         attributes = {}
-        attributes["battery_level"] = self._feeder.battery_level
+        attributes["battery_level_description"] = self._feeder.battery_level
+        attributes["battery_level"] = self._feeder.battery_level_int
         attributes["is_food_low"] = data["is_food_low"]
         attributes["connection_status"] = data["connection_status"]
         attributes["connection_status_timestamp"] = data["connection_status_timestamp"]
