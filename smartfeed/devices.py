@@ -161,7 +161,7 @@ class DeviceSmartFeed:
         maxVoltage = 29100
 
         # Respect max and min bounds
-        voltage = max(min(self.data['battery_voltage'], maxVoltage), minVoltage)
+        voltage = max(min(int(self.data['battery_voltage']), maxVoltage), minVoltage)
 
         return round(100 * (voltage - minVoltage) / (maxVoltage - minVoltage))
 
