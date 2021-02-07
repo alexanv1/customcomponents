@@ -224,7 +224,11 @@ class BridgedMySmartBlindCover(CoverEntity):
     @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
-        return 'window'
+        return 'blind'
+
+    @property
+    def unique_id(self):
+        return f'mysmartblinds_{self._blind.encoded_mac}'
 
     @property
     def supported_features(self):

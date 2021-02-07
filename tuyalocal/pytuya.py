@@ -147,6 +147,11 @@ class Device(threading.Thread):
         self.port = 6668  # default - do not expect caller to pass in
 
         self.state = []
+
+    @property
+    def device_id(self):
+        """Returns the Device ID."""
+        return self.id
     
     def subscribe(self, callback):
         """

@@ -85,7 +85,7 @@ class AquantaWaterHeater(WaterHeaterEntity):
         self._data = {}
         self._settings = {}
 
-        self.login()
+        self.check_login()
 
         self.update()
 
@@ -109,13 +109,13 @@ class AquantaWaterHeater(WaterHeaterEntity):
             self.set_location()
     
     def check_login(self):
-        if datetime.now() - self._login_time > timedelta(minutes = 30):
+        if self._session is None or (datetime.now() - self._login_time > timedelta(minutes = 30)):
             # Login again after 30 minutes
             self.login()
 
     def check_response(self, response):
         if response.status_code != 200:
-            _LOGGER.error(f'Operation failed, status = {loginResponse.status_code}')
+            _LOGGER.error(f'Operation failed, status = {response.status_code}')
 
     def set_location(self):
         response = self._session.get(API_GET_URL)
@@ -206,6 +206,15 @@ class AquantaWaterHeater(WaterHeaterEntity):
         """Return the name of the water heater."""
         return f'{self._settings["userDescription"]} Water Heater'
 
+    @property
+    def unique_id(self):
+        return f'{self._location}_water_heater'
+
+    @property
+    def icon(self):
+        """Return the icon of device."""
+        return 'mdi:water-pump'
+
     def set_operation_mode(self, operation_mode):
         """Set new target operation mode."""
         self.check_login()
@@ -255,15 +264,19 @@ class AquantaWaterHeater(WaterHeaterEntity):
         await self.hass.async_add_executor_job(self.turn_away_mode_off)
 
     def update(self):
-        """Get the latest state."""
-        self.check_login()
-        
-        response = self._session.get(API_GET_URL)
-        _LOGGER.debug(f'Received {API_GET_URL} response, status = {response.status_code}, json = {response.json()}')
-        self.check_response(response)
-        self._data = response.json()
+        try:
+            """Get the latest state."""
+            self.check_login()
+            
+            response = self._session.get(API_GET_URL)
+            _LOGGER.debug(f'Received {API_GET_URL} response, status = {response.status_code}, json = {response.json()}')
+            self.check_response(response)
+            self._data = response.json()
 
-        response = self._session.get(API_SETTINGS_URL)
-        _LOGGER.debug(f'Received {API_SETTINGS_URL} response, status = {response.status_code}, json = {response.json()}')
-        self.check_response(response)
-        self._settings = response.json()
+            response = self._session.get(API_SETTINGS_URL)
+            _LOGGER.debug(f'Received {API_SETTINGS_URL} response, status = {response.status_code}, json = {response.json()}')
+            self.check_response(response)
+            self._settings = response.json()
+        except:
+            _LOGGER.error(f'Update error, will try to login and retry on the next update interval.', exc_info=True)
+            self._session = None

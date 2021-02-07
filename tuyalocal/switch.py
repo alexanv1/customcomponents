@@ -92,6 +92,10 @@ class TuyaDevice(SwitchEntity):
         return True
 
     @property
+    def unique_id(self):
+        return f'tuya_{self._device.device_id}'
+
+    @property
     def name(self):
         """Get name of Tuya switch."""
         return self._name
