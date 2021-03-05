@@ -1,6 +1,7 @@
 {
     "domain": "autopi",
     "name": "AutoPi",
+    "version": "1.0.0",
     "documentation": "https://my.autopi.io",
     "requirements": [],
     "dependencies": [],

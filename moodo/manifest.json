@@ -1,6 +1,7 @@
 {
     "domain": "moodo",
     "name": "Moodo",
+    "version": "1.0.0",
     "documentation": "https://rest.moodo.co/",
     "requirements": [
       "python-socketio==4.4.0",

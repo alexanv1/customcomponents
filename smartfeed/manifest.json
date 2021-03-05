@@ -1,6 +1,7 @@
 {
     "domain": "smartfeed",
     "name": "PetSafe SmartFeed",
+    "version": "1.0.0",
     "documentation": "https://www.petsafe.net/",
     "requirements": [],
     "dependencies": [],
