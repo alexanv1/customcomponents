@@ -124,8 +124,8 @@ class MySmartBlindsBridge:
 
             # Filter out duplicates
             return self._blinds_by_mac.values(), self._rooms
-        except Exception as ex:
-            _LOGGER.error("Error logging in or listing devices %s", ex)
+        except Exception:
+            _LOGGER.error("Error logging in or listing devices %s", exc_info=True)
             raise
 
     def get_blind_state(self, blind):
@@ -191,8 +191,8 @@ class MySmartBlindsBridge:
             self.update_blind_states()
             for entity in self.entities:
                 entity.schedule_update_ha_state(force_refresh=True)
-        except Exception as ex:
-            _LOGGER.error("Error updating periodic state %s", ex)
+        except Exception:
+            _LOGGER.error("Error updating periodic state", exc_info=True)
 
 
 class BridgedMySmartBlindCover(CoverEntity):
