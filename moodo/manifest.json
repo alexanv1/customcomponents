@@ -4,6 +4,7 @@
     "version": "1.0.0",
     "documentation": "https://rest.moodo.co/",
     "requirements": [
+      "python-engineio==3.13.1",
       "python-socketio==4.4.0",
       "websocket-client==0.57.0"
     ],
