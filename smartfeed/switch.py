@@ -73,7 +73,7 @@ class SmartFeedDevice(SwitchEntity):
         return self._feeder.paused == False
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         data = self._feeder.data_json
         attributes = {}
         attributes["battery_level_description"] = self._feeder.battery_level

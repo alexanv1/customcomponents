@@ -251,7 +251,7 @@ class MoodoDevice(LightEntity):
         return self._state
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         attributes = self._data.copy()
         attributes["Slot 1"] = self._data["settings"][0]
         attributes["Slot 2"] = self._data["settings"][1]

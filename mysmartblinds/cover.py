@@ -269,7 +269,7 @@ class BridgedMySmartBlindCover(CoverEntity):
         return self._position
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes."""
         attr = {
             ATTR_BATTERY_LEVEL: self._battery_level,
