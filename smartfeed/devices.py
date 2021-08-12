@@ -1,27 +1,39 @@
 import json
-from .api import *
+import logging
+from . import api
 
+_LOGGER = logging.getLogger(__name__)
 
-def get_feeders(token):
+def get_feeders(api_token):
     """
     Sends a request to PetSafe's API for all feeders associated with account.
 
-    :param token: the access token for the account
+    :param api_token: the access token for the account
     :return: list of Feeders
 
     """
-    response = sf_get('feeders', token)
+    api.get_idtoken(api_token)
+    response = api.sf_get('feeders')
     response.raise_for_status()
     content = response.content.decode('UTF-8')
-    return [DeviceSmartFeed(token, feeder_data) for feeder_data in json.loads(content)]
+
+    response_content_json = json.loads(content)
+    _LOGGER.debug(f"get_feeders: Retrieved feeder information: {response_content_json}")
+
+    return [DeviceSmartFeed(feeder_data) for feeder_data in response_content_json]
 
 
 class DeviceSmartFeed:
-    def __init__(self, token, data):
-        self.token = token
+    def __init__(self, data):
         self.data = data
 
     def __str__(self):
+        return self.to_json()
+
+    def to_json(self):
+        """
+        All feeder data formatted as JSON.
+        """
         return json.dumps(self.data, indent=2)
 
     def update_data(self):
@@ -29,7 +41,7 @@ class DeviceSmartFeed:
         Updates self.data to the feeder's current online state.
 
         """
-        response = sf_get(self.api_path, token=self.token)
+        response = api.sf_get(self.api_path)
         response.raise_for_status()
         self.data = json.loads(response.content.decode('UTF-8'))
 
@@ -42,7 +54,7 @@ class DeviceSmartFeed:
         :param force_update: if True, update ALL data after PUT. Defaults to False.
 
         """
-        response = sf_put(self.api_path + 'settings/' + setting, token=self.token, data={
+        response = api.sf_put(self.api_path + '/settings/' + setting, data={
             'value': value
         })
         response.raise_for_status()
@@ -60,7 +72,7 @@ class DeviceSmartFeed:
         :return: the APIs response in JSON.
 
         """
-        response = sf_get(self.api_path + 'messages?days=' + str(days), token=self.token)
+        response = api.sf_get(self.api_path + '/messages?days=' + str(days))
         response.raise_for_status()
         return json.loads(response.content.decode('UTF-8'))
 
@@ -88,7 +100,7 @@ class DeviceSmartFeed:
         """
         if slow_feed is None:
             slow_feed = self.data['settings']['slow_feed']
-        response = sf_post(self.api_path + 'meals', self.token, data={
+        response = api.sf_post(self.api_path + '/meals', data={
             'amount': amount,
             'slow_feed': slow_feed
         })
@@ -120,7 +132,7 @@ class DeviceSmartFeed:
     @property
     def api_path(self):
         """The feeder's path on the API."""
-        return 'feeders/' + self.api_name + '/'
+        return 'feeders/' + self.api_name
 
     @property
     def id(self):
@@ -214,6 +226,19 @@ class DeviceSmartFeed:
     @pet_type.setter
     def pet_type(self, value):
         self.put_setting('pet_type', value)
+
+    @property
+    def food_sensor_current(self):
+        """The feeder's food sensor status."""
+        return self.data['food_sensor_current']
+
+    @property
+    def food_low_status(self):
+        """
+        The feeder's food low status.
+        :return: 0 if Full, 1 if Low, 2 if Empty
+        """
+        return int(self.data['is_food_low'])
 
     @property
     def data_json(self):
