@@ -1,41 +1,22 @@
 """
-Simple platform to control Moodo Aroma Diffuser devices (exposed as lights to enable fan speed control via brightness)
+Switch platform to control PetSafe SmartFeed devices
 """
-
-import logging
-import json
-import voluptuous as vol
 from datetime import timedelta
 
-from homeassistant.components.switch import (SwitchEntity, PLATFORM_SCHEMA)
-import homeassistant.helpers.config_validation as cv
+from homeassistant.core import HomeAssistant
+from homeassistant.components.switch import SwitchEntity
 
-from .devices import get_feeders
+from . import DOMAIN, get_device_info
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
-_LOGGER = logging.getLogger(__name__)
+async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
+    """Set up SmartFeed switch entities."""
 
-CONF_API_TOKEN = 'api_token'
+    for feederDevice in hass.data[DOMAIN]:
+        async_add_entities([SmartFeedSwitch(hass, feederDevice)])
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_API_TOKEN): cv.string,
-})
-
-API_TOKEN = None
-
-def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Set up of the Moodo devices."""
-
-    token = config.get(CONF_API_TOKEN)
-
-    # Get the devices
-    feeders = get_feeders(token)
-
-    for feederDevice in feeders:
-        add_devices([SmartFeedDevice(hass, feederDevice)])
-
-class SmartFeedDevice(SwitchEntity):
+class SmartFeedSwitch(SwitchEntity):
     
     def __init__(self, hass, feeder):
         self._feeder = feeder
@@ -51,6 +32,10 @@ class SmartFeedDevice(SwitchEntity):
 
     def update(self):
         self._feeder.update_data()
+
+    @property
+    def device_info(self):
+        return get_device_info(self._feeder)
 
     @property
     def should_poll(self):
@@ -84,7 +69,6 @@ class SmartFeedDevice(SwitchEntity):
         
         schedules = {}
         for schedule in data["schedules"]:
-            schedule_string = f'{schedule["time"]}: {float(schedule["amount"])} cups'
             schedules[schedule["time"]] = f'{float(schedule["amount"]) / 8} cups'
 
         attributes["schedule"] = schedules

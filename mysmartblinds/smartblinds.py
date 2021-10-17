@@ -215,9 +215,6 @@ class SmartBlindsClient:
 
         _LOGGER.debug("Tokens %s", self._tokens)
 
-        #if self._tokens["token_type"] != "bearer":
-        #    raise Exception("Not a bearer token")
-
         if "id_token" not in self._tokens:
             raise Exception("No id_token")
 
