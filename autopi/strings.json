@@ -1,0 +1,15 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "username": "Username",
+                    "password": "Password"
+                },
+                "description": "AutoPi configuration",
+                "title": "AutoPi"
+            }
+        },
+        "title": "AutoPi"
+    }
+}

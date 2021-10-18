@@ -1,25 +1,18 @@
 """
-Support for PhoneTrackOC device tracking.
+Support for AutoPi device tracking.
 """
 import logging
 from datetime import timedelta
 import requests
-import voluptuous as vol
 
-from homeassistant.components.device_tracker import PLATFORM_SCHEMA, SOURCE_TYPE_GPS
+from homeassistant.components.device_tracker import SOURCE_TYPE_GPS
+from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from homeassistant.util import slugify
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.helpers.event import track_time_interval
-import homeassistant.helpers.config_validation as cv
+
+from . import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_PASSWORD): cv.string,
-        vol.Required(CONF_USERNAME): cv.string,
-    }
-)
 
 SCAN_INTERVAL = timedelta(seconds=15)
 
@@ -35,16 +28,29 @@ ATTR_SPEED = "speed"
 ATTR_RPM = "rpm"
 ATTR_COOLANT_TEMPERATURE = "coolant_temperature"
 
-# Login to AutoPi
-def login(config):
-    """LOgin to AutoPi"""
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up of the AutoPi devices."""
+
+    # Get AutoPi devices
+    devices = await hass.async_add_executor_job(get_devices, config_entry)
+
+    # Enumerate AutoPi devices and create a device tracker entity for each one
+    for device in devices:
+        tracker = AutoPiDeviceTracker(config_entry, device)
+        async_add_entities([tracker], update_before_add=True)
+
+def get_devices(config_entry):
+    """LOgin to AutoPi and get devices"""
     global _HEADERS
+
+    username = config_entry.data[CONF_USERNAME]
+    password = config_entry.data[CONF_PASSWORD]
 
     devices = {}
 
     _LOGGER.info(f'Logging in to AutoPi.')
 
-    login_data = {"email": config[CONF_USERNAME], "password": config[CONF_PASSWORD]}
+    login_data = {"email": username, "password": password}
     login_response = requests.post(API_LOGIN_URL, data = login_data)
     login_response_json = login_response.json()
 
@@ -58,46 +64,73 @@ def login(config):
 
     return devices
 
-def setup_scanner(hass, config, see, discovery_info=None):
-    """Setup AutoPi scanner."""
+class AutoPiDeviceTracker(TrackerEntity):
+    """ AutoPi Device Tracker """
 
-    devices = login(config)
-
-    AutoPiDeviceTracker(hass, config, see, devices)
-
-    return True
-
-class AutoPiDeviceTracker(object):
-    """
-    AutoPi Device Tracker
-    """
-    def __init__(self, hass, config, see, devices):
-        """Initialize the AutoPi tracking."""
-        self._see = see
-        self._devices = devices
+    def __init__(self, config, device):
         self._config = config
+        self._device = device
 
-        track_time_interval(hass, self._update, SCAN_INTERVAL)
+        self._unit_id = device["unit_id"]
+        self._device_id = device["id"]
+        self._vehicle_name = f'{device["vehicle"]["year"]} {device["vehicle"]["display"]}'
 
-        self._update()
+        self._location = []
+        self._attributes = []
 
-    def _update(self, now=None):
+    @property
+    def should_poll(self):
+        return True
+
+    @property
+    def name(self):
+        return self._vehicle_name
+
+    @property
+    def unique_id(self):
+        return slugify(self._vehicle_name)
+
+    @property
+    def icon(self):
+        return "mdi:car"
+
+    @property
+    def source_type(self):
+        return SOURCE_TYPE_GPS
+
+    @property
+    def latitude(self):
+        return self._location["lat"]
+
+    @property
+    def longitude(self):
+        return self._location["lon"]
+
+    @property
+    def extra_state_attributes(self):
+        return self._attributes
+
+    @property
+    def device_info(self):
+        return {
+            "identifiers": {(DOMAIN, self.unique_id)},
+            "name": self._vehicle_name,
+            "manufacturer": "AutoPi",
+            "model": f"AutoPi Dongle",
+        }
+
+    def update(self):
         """Update the device info."""
         
-        _LOGGER.debug("Updating AutoPi devices")
+        _LOGGER.debug(f"Updating AutoPi device: {self._vehicle_name}")
 
         position_response_json = self._get_positions()
 
-        for device in self._devices:
-            unit_id = device["unit_id"]
-
-            for record in position_response_json:
-                if record["unit_id"] == unit_id:
-                    _LOGGER.debug(f'Found position data for device with unit_id = {unit_id}')
-                    self._get_vehicle_data(device, record["positions"])
-                    break
-
-        return True
+        for record in position_response_json:
+            if record["unit_id"] == self._unit_id:
+                _LOGGER.debug(f'Found position data for device with unit_id = {self._unit_id}')
+                self._get_vehicle_data(record["positions"])
+                break
 
     def _get_positions(self):
         """Update the latest position for all devices."""
@@ -107,7 +140,7 @@ class AutoPiDeviceTracker(object):
         _LOGGER.debug(f'Received {API_POSITION_URL} response, status = {position_response.status_code}, json = {position_response_json}')
 
         if position_response.status_code != 200:
-            login(self._config)
+            get_devices(self._config)
 
             # Get device positions again
             position_response = requests.get(API_POSITION_URL, headers = _HEADERS)
@@ -117,25 +150,15 @@ class AutoPiDeviceTracker(object):
         return position_response_json
 
 
-    def _get_vehicle_data(self, device: dict, positions: dict):
+    def _get_vehicle_data(self, positions: dict):
         """Update vehicle data."""
 
-        device_id = device["id"]
-        vehicle_name = f'{device["vehicle"]["year"]} {device["vehicle"]["display"]}'
+        self._location = positions[0]["location"]
+        self._attributes = self._get_vehicle_attributes()
+        _LOGGER.info(f"{self._vehicle_name} -  location: {self._location}, attributes {self._attributes}")
 
-        location = positions[0]["location"]
-
-        attributes = self._get_vehicle_attributes(device_id, vehicle_name)
-        _LOGGER.info(f"{vehicle_name} -  location: {location}, attributes {attributes}")
-
-        self._see(
-            dev_id = slugify(vehicle_name),
-            source_type = SOURCE_TYPE_GPS,
-            gps = (location["lat"], location["lon"]),
-            attributes = attributes,
-        )
-
-    def _get_vehicle_attributes(self, device_id, vehicle_name):
+    def _get_vehicle_attributes(self):
+        """Update vehicle attributes."""
         attributes = {}
 
         attribute_types =  {
@@ -152,16 +175,16 @@ class AutoPiDeviceTracker(object):
         from_utc = "2020-01-01T00:00:00Z"
 
         for attribute, attribute_type in attribute_types.items():
-            url = f'{API_STORAGE_READ_URL}{device_id}&field={attribute}&field_type={attribute_type}&aggregation=none&from_utc={from_utc}&size=1'
+            url = f'{API_STORAGE_READ_URL}{self._device_id}&field={attribute}&field_type={attribute_type}&aggregation=none&from_utc={from_utc}&size=1'
 
             response = requests.get(url, headers = _HEADERS)
             response_json = response.json()
 
-            _LOGGER.debug(f'{vehicle_name} - received {url} response, status = {response.status_code}, json = {response_json}')
+            _LOGGER.debug(f'{self._vehicle_name} - received {url} response, status = {response.status_code}, json = {response_json}')
             if response.status_code == 200:
                 attributes[hass_attribute_names[attribute]] = response_json[0]["value"]
             else:
-                _LOGGER.info(f'{vehicle_name} - response status = {response.status_code}, settting {hass_attribute_names[attribute]} to 0')
+                _LOGGER.info(f'{self._vehicle_name} - response status = {response.status_code}, settting {hass_attribute_names[attribute]} to 0')
                 attributes[hass_attribute_names[attribute]] = 0
 
         return attributes
