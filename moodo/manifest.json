@@ -2,6 +2,7 @@
     "domain": "moodo",
     "name": "Moodo",
     "version": "1.0.0",
+    "config_flow": true,
     "documentation": "https://rest.moodo.co/",
     "requirements": [
       "python-engineio==3.13.1",

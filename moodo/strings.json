@@ -1,0 +1,14 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "api_token": "API Token"
+                },
+                "description": "Moodo configuration",
+                "title": "Moodo Aroma Diffusers"
+            }
+        },
+        "title": "Moodo Aroma Diffusers"
+    }
+}

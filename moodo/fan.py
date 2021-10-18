@@ -1,56 +1,50 @@
 """
-Simple platform to control Moodo Aroma Diffuser devices (exposed as lights to enable fan speed control via brightness)
+Simple platform to control Moodo Aroma Diffuser devices
 """
 
 import logging
-import json
-import voluptuous as vol
 import requests
 import socketio
 from datetime import timedelta
 
+from homeassistant.components.fan import (FanEntity, SUPPORT_SET_SPEED)
 
-from homeassistant.components.light import (LightEntity, PLATFORM_SCHEMA, ATTR_BRIGHTNESS, SUPPORT_BRIGHTNESS)
-from homeassistant.const import (CONF_NAME, CONF_HOST, CONF_ID, CONF_SWITCHES, CONF_FRIENDLY_NAME)
-from homeassistant.helpers.service import extract_entity_ids
-import homeassistant.helpers.config_validation as cv
+from . import DOMAIN, CONF_API_TOKEN
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
 _LOGGER = logging.getLogger(__name__)
 
-CONF_API_TOKEN = 'api_token'
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_API_TOKEN): cv.string,
-})
-
 API_BASE_URL = "https://rest.moodo.co/api/boxes"
 API_TOKEN = None
 HEADERS = None
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
+async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up of the Moodo devices."""
 
     global HEADERS
     global API_TOKEN
 
-    API_TOKEN = config.get(CONF_API_TOKEN)
+    API_TOKEN = config_entry.data[CONF_API_TOKEN]
     HEADERS = {"token": API_TOKEN, "accept":"application/json"}
 
     # Get the Moodo boxes
+    resp = await hass.async_add_executor_job(get_devices)
+
+    # Enumerate Moodo boxes and create a device for each one
+    for moodo_json in resp.json()['boxes']:
+        moodo = MoodoDevice(hass, moodo_json['device_key'], moodo_json['id'], moodo_json['name'])
+        async_add_entities([moodo], update_before_add=True)
+
+def get_devices():
     _LOGGER.debug("Sending GET to {} with headers={}".format(API_BASE_URL, HEADERS))
     resp = requests.get(API_BASE_URL, headers=HEADERS)
     if resp.status_code != 200:
         # Something went wrong
         raise Exception('GET {} failed with status {}, error: {}'.format(API_BASE_URL, resp.status_code, resp.json()["error"]))
+    return resp
 
-    # Enumerate Moodo boxes and create a device for each one
-    for moodo_json in resp.json()['boxes']:
-        moodo = MoodoDevice(hass, moodo_json['device_key'], moodo_json['id'], moodo_json['name'])
-        add_devices([moodo])
-
-class MoodoDevice(LightEntity):
+class MoodoDevice(FanEntity):
     
     def __init__(self, hass, device_key, device_id, device_name):
         self._update_counter = 0
@@ -68,8 +62,7 @@ class MoodoDevice(LightEntity):
         self._state = False
         self._fan_volume = 0
 
-        self.update_via_REST()
-        self.listen_for_websocket_events()
+        self._socketio = None
 
     async def async_added_to_hass(self):
         self._added_to_hass = True
@@ -124,7 +117,7 @@ class MoodoDevice(LightEntity):
         # Turn ON or OFF
         json = {
                     "device_key": self._device_key,
-                    "fan_volume": fan_volume * 100 / 255,           # Limit to 0..100
+                    "fan_volume": fan_volume,
                     "box_status": 1,
                     "settings_slot0":
                     {
@@ -157,16 +150,29 @@ class MoodoDevice(LightEntity):
         self._fan_volume = fan_volume
         self._state = state
 
-    def turn_on(self, **kwargs):
+    def turn_on(
+        self,
+        percentage: int = None,
+        **kwargs,
+    ) -> None:
 
         fan_volume = self._fan_volume
-        if ATTR_BRIGHTNESS in kwargs:
-            fan_volume = kwargs[ATTR_BRIGHTNESS]
+        if percentage is not None:
+            fan_volume = percentage
+        
+        if fan_volume == 0:
+            fan_volume = 75
 
         self.set_state(True, fan_volume)
 
     def turn_off(self, **kwargs):
-        self.set_state(False, self._fan_volume)
+        self.set_state(False, 0)
+
+    def set_percentage(self, percentage: int) -> None:
+        if percentage == 0:
+            self.turn_off()
+        else:
+            self.set_state(True, percentage)
 
     def update_state(self, data):
         self._data = data
@@ -181,7 +187,7 @@ class MoodoDevice(LightEntity):
                     self._state = True
                     break
 
-        self._fan_volume = self._data["fan_volume"] * 255 / 100      # 0..255
+        self._fan_volume = self._data["fan_volume"]
 
         if self._added_to_hass:
             # Tell HASS to update
@@ -231,6 +237,15 @@ class MoodoDevice(LightEntity):
             self._update_counter = 0
 
     @property
+    def device_info(self):
+        return {
+            "name": self.name,
+            "identifiers": {(DOMAIN, self.unique_id)},
+            "model": "Moodo Smart Aroma Diffuser",
+            "manufacturer": "Moodo",
+        }
+
+    @property
     def should_poll(self):
         return True
 
@@ -261,10 +276,14 @@ class MoodoDevice(LightEntity):
         return attributes
 
     @property
-    def brightness(self):
-        # Return fan volume as brightness
+    def percentage(self):
+        """Return the current speed."""
         return self._fan_volume
 
     @property
     def supported_features(self):
-        return SUPPORT_BRIGHTNESS
+        return SUPPORT_SET_SPEED
+
+    @property
+    def icon(self):
+        return 'mdi:flower'
