@@ -1,0 +1,15 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "username": "Username",
+                    "password": "Password"
+                },
+                "description": "Aquanta configuration",
+                "title": "Aquanta"
+            }
+        },
+        "title": "Aquanta"
+    }
+}

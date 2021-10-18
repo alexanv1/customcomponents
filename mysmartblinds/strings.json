@@ -1,0 +1,16 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "username": "Username",
+                    "password": "Password",
+                    "include_rooms": "Include Rooms"
+                },
+                "description": "MySmartBlinds configuration",
+                "title": "MySmartBlinds"
+            }
+        },
+        "title": "MySmartBlinds"
+    }
+}

@@ -1,10 +1,10 @@
 {
     "domain": "mysmartblinds",
     "name": "MySmartBlinds",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "config_flow": true,
-    "documentation": "https://github.com/ianlevesque/smartblinds-client",
-    "requirements": ["smartblinds-client==0.6"],
+    "documentation": "https://github.com/alexanv1/customcomponents/tree/master/mysmartblinds",
+    "requirements": [],
     "dependencies": [],
     "codeowners": []
   }

@@ -2,6 +2,7 @@
     "domain": "aquanta",
     "name": "Aquanta",
     "version": "1.0.0",
+    "config_flow": true,
     "documentation": "https://portal.aquanta.io/",
     "requirements": [],
     "dependencies": [],

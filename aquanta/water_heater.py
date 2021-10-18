@@ -3,22 +3,17 @@ Simple platform to control Aquanta Water Heater
 """
 
 import logging
-import json
-import voluptuous as vol
 import requests
 from datetime import datetime, timedelta, timezone
 
 from homeassistant.helpers.temperature import display_temp
 
 from homeassistant.components.water_heater import (
-    PLATFORM_SCHEMA,
     SUPPORT_OPERATION_MODE,
     SUPPORT_AWAY_MODE,
     WaterHeaterEntity,
 )
 from homeassistant.const import (
-    ATTR_ENTITY_ID,
-    ATTR_TEMPERATURE,
     PRECISION_WHOLE,
     CONF_PASSWORD,
     CONF_USERNAME,
@@ -26,15 +21,12 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
 )
-import homeassistant.helpers.config_validation as cv
+
+from . import DOMAIN
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
 _LOGGER = logging.getLogger(__name__)
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {vol.Required(CONF_USERNAME): cv.string, vol.Required(CONF_PASSWORD): cv.string}
-)
 
 SUPPORT_FLAGS_HEATER = SUPPORT_AWAY_MODE | SUPPORT_OPERATION_MODE
 
@@ -61,12 +53,12 @@ ATTR_AVAILABLE_PERCENT = "available_percentage"
 ATTR_PERFORMANCE_MODE = "performance_mode"
 ATTR_AQUANTA_INTELLIGENCE_ACIVE = "aquanta_intelligence_active"
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Aquanta water heaters."""
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up Aquanta Water Heater entity."""
 
-    username = config.get(CONF_USERNAME)
-    password = config.get(CONF_PASSWORD)
-    add_entities([AquantaWaterHeater(username, password)])
+    username = config_entry.data[CONF_USERNAME]
+    password = config_entry.data[CONF_PASSWORD]
+    async_add_entities([AquantaWaterHeater(username, password)], update_before_add=True)
 
 
 class AquantaWaterHeater(WaterHeaterEntity):
@@ -84,10 +76,6 @@ class AquantaWaterHeater(WaterHeaterEntity):
 
         self._data = {}
         self._settings = {}
-
-        self.check_login()
-
-        self.update()
 
     def login(self):
         self._session = requests.Session()
@@ -131,6 +119,15 @@ class AquantaWaterHeater(WaterHeaterEntity):
         end = start + timedelta(days = 30)
         timeFormat = "%Y-%m-%dT%T-07:00"
         return dict(start=start.strftime(timeFormat), stop=end.strftime(timeFormat), mode='now')
+
+    @property
+    def device_info(self):
+        return {
+            "name": f'{self._settings["userDescription"]} Water Heater',
+            "identifiers": {(DOMAIN, f'{self._location}_water_heater')},
+            "model": "Aquanta Smart Water Heater Controller",
+            "manufacturer": "Aquanta",
+        }
 
     @property
     def state(self):

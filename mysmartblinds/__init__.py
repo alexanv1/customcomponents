@@ -1,8 +1,5 @@
 """
 Support for MySmartBlinds Smart Bridge
-
-For more details about this component, please refer to the documentation at
-https://home-assistant.io/components/cover.mysmartblinds_bridge
 """
 
 import asyncio
