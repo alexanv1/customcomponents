@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "config_flow": true,
     "documentation": "https://github.com/alexanv1/customcomponents/tree/master/mysmartblinds",
-    "requirements": [],
+    "requirements": ["auth0-python==3.19.0"],
     "dependencies": [],
     "codeowners": []
   }
