@@ -22,6 +22,10 @@ class AquantaWaterHeaterControlModeSelect(SelectEntity):
         return True
 
     @property
+    def device_info(self):
+        return self._device.device_info
+
+    @property
     def name(self):
         return f"{self._device.name} Control Mode"
 
