@@ -70,6 +70,13 @@ class AquantaWaterHeaterEntity(WaterHeaterEntity):
         return features
 
     @property
+    def state(self):
+        if (self.is_away_mode_on):
+            return "Away"
+
+        return self.current_operation
+
+    @property
     def current_temperature(self):
         return self._device.current_temperature
 
