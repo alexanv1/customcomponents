@@ -1,279 +1,121 @@
-"""
-Simple platform to control Aquanta Water Heater
-"""
-
-import logging
-import requests
-from datetime import datetime, timedelta, timezone
-
-from homeassistant.helpers.temperature import display_temp
+from datetime import timedelta
 
 from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
     SUPPORT_AWAY_MODE,
+    SUPPORT_TARGET_TEMPERATURE,
     WaterHeaterEntity,
 )
 from homeassistant.const import (
     PRECISION_WHOLE,
-    CONF_PASSWORD,
-    CONF_USERNAME,
-    TEMP_CELSIUS,
-    STATE_OFF,
-    STATE_ON,
+    TEMP_FAHRENHEIT,
+    ATTR_TEMPERATURE,
 )
 
-from . import DOMAIN
+from . import DOMAIN, OPERATION_MODE_NORMAL, OPERATION_MODE_BOOST, AquantaWaterHeater
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
-_LOGGER = logging.getLogger(__name__)
-
-SUPPORT_FLAGS_HEATER = SUPPORT_AWAY_MODE | SUPPORT_OPERATION_MODE
-
-API_BASE_URL = "https://portal.aquanta.io/portal"
-API_LOGIN_URL = f"{API_BASE_URL}/login"
-API_GET_URL = f"{API_BASE_URL}/get"
-API_SET_LOCATION_URL = f"{API_BASE_URL}/set/selected_location?locationId="
-API_SETTINGS_URL = f"{API_BASE_URL}/get/settings"
-
-API_AWAY_MODE_ON = f"{API_BASE_URL}/set/schedule/away"
-API_AWAY_MODE_OFF = f"{API_BASE_URL}/set/schedule/away/off"
-
-API_BOOST_MODE_ON = f"{API_BASE_URL}/set/schedule/boost"
-API_BOOST_MODE_OFF = f"{API_BASE_URL}/set/schedule/boost/off"
-
-OPERATION_MODE_NORMAL = 'Normal'
-OPERATION_MODE_BOOST = 'Boost'
-
-ATTR_AWAY_MODE = "away_mode"
-ATTR_OPERATION_MODE = "operation_mode"
-ATTR_OPERATION_LIST = "operation_list"
-ATTR_CURRENT_TEMPERATURE = "current_temperature"
-ATTR_AVAILABLE_PERCENT = "available_percentage"
+ATTR_HOT_WATER_AVAILABLE_PERCENT = "hot_water_available"
 ATTR_PERFORMANCE_MODE = "performance_mode"
 ATTR_AQUANTA_INTELLIGENCE_ACIVE = "aquanta_intelligence_active"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up Aquanta Water Heater entity."""
-
-    username = config_entry.data[CONF_USERNAME]
-    password = config_entry.data[CONF_PASSWORD]
-    async_add_entities([AquantaWaterHeater(username, password)], update_before_add=True)
+    device = hass.data[DOMAIN]
+    async_add_entities([AquantaWaterHeaterEntity(device)], update_before_add=True)
 
 
-class AquantaWaterHeater(WaterHeaterEntity):
-    """Representation of an Aquanta water heater."""
+class AquantaWaterHeaterEntity(WaterHeaterEntity):
 
-    def __init__(self, username, password):
-        """Initialize the water heater."""
-        self._username = username
-        self._password = password
-
-        self._login_time = None
-
-        self._session = None
-        self._location = None
-
-        self._data = {}
-        self._settings = {}
-
-    def login(self):
-        self._session = requests.Session()
-
-        _LOGGER.info(f'Logging in to Aquanta.')
-
-        login_data = dict(email=self._username, password=self._password, returnSecureToken=True)
-        verifyPasswordResponse = self._session.post("https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyBHWHB8Org9BWCH-YFzis-8oEbMaKmI2Tw", data=login_data)
-        _LOGGER.info(f'Received VerifyPassword response, status = {verifyPasswordResponse.status_code}, json = {verifyPasswordResponse.json()}')
-
-        idToken = dict(idToken = verifyPasswordResponse.json()["idToken"])
-        loginResponse = self._session.post(f"{API_BASE_URL}/login", data=idToken)
-        _LOGGER.info(f'Received login response, status = {loginResponse.status_code}, json = {loginResponse.json()}')
-
-        if loginResponse.status_code != 200:
-            _LOGGER.error(f'Login Failed, status = {loginResponse.status_code}')
-        else:
-            self._login_time = datetime.now()
-            self.set_location()
-    
-    def check_login(self):
-        if self._session is None or (datetime.now() - self._login_time > timedelta(minutes = 30)):
-            # Login again after 30 minutes
-            self.login()
-
-    def check_response(self, response):
-        if response.status_code != 200:
-            _LOGGER.error(f'Operation failed, status = {response.status_code}')
-
-    def set_location(self):
-        response = self._session.get(API_GET_URL)
-        locations = response.json()["locations"]
-        self._location = next(iter(locations))
-        response = self._session.put(f"{API_SET_LOCATION_URL}{self._location}")
-        _LOGGER.info(f'Set location to {self._location}, status = {response.status_code}')
-
-        self.check_response(response)
-
-    def get_schedule_dictionary(self):
-        start = datetime.now(timezone.utc).astimezone()
-        end = start + timedelta(days = 30)
-        timeFormat = "%Y-%m-%dT%T-07:00"
-        return dict(start=start.strftime(timeFormat), stop=end.strftime(timeFormat), mode='now')
+    def __init__(self, device: AquantaWaterHeater):
+        self._device = device
 
     @property
     def device_info(self):
-        return {
-            "name": f'{self._settings["userDescription"]} Water Heater',
-            "identifiers": {(DOMAIN, f'{self._location}_water_heater')},
-            "model": "Aquanta Smart Water Heater Controller",
-            "manufacturer": "Aquanta",
-        }
-
-    @property
-    def state(self):
-        """Return the current state."""
-        if (self.is_away_mode_on):
-            return "Away"
-
-        return self.current_operation
-
-    @property
-    def capability_attributes(self):
-        """Return capability attributes."""
-        return {
-            ATTR_OPERATION_LIST: self.operation_list,
-        }
+        return self._device.device_info
 
     @property
     def temperature_unit(self):
-        """Return the unit of measurement."""
-        return TEMP_CELSIUS
+        return TEMP_FAHRENHEIT
 
     @property
     def precision(self):
-        """Return the precision of the system."""
         return PRECISION_WHOLE
 
     @property
-    def state_attributes(self):
-        """Return the optional state attributes."""
-        data = {
-            ATTR_CURRENT_TEMPERATURE: display_temp(self.hass, self.current_temperature, self.temperature_unit, self.precision),
-            ATTR_OPERATION_MODE: self.current_operation,
-            ATTR_AWAY_MODE: STATE_ON if self.is_away_mode_on else STATE_OFF,
-            ATTR_AVAILABLE_PERCENT: round(self._data["hw_avail_fraction"] * 100),
-            ATTR_PERFORMANCE_MODE: self._data["efficiencySelection"],
-            ATTR_AQUANTA_INTELLIGENCE_ACIVE: not self._settings["aquantaIntel"],
+    def extra_state_attributes(self):
+        return {
+            ATTR_HOT_WATER_AVAILABLE_PERCENT: self._device.hot_water_available,
+            ATTR_PERFORMANCE_MODE: self._device.state["efficiencySelection"],
+            ATTR_AQUANTA_INTELLIGENCE_ACIVE: self._device.aquanta_intelligence_active,
         }
-
-        return data
 
     @property
     def current_operation(self):
-        """
-        Return current operation mode.
-        """
-        if self._data["boostRunning"]:
+        if self._device.state["boostRunning"]:
             return OPERATION_MODE_BOOST
 
         return OPERATION_MODE_NORMAL
 
     @property
     def operation_list(self):
-        """List of available operation modes."""
         return [OPERATION_MODE_NORMAL, OPERATION_MODE_BOOST]
 
     @property
     def supported_features(self):
-        """Return the list of supported features."""
-        return SUPPORT_FLAGS_HEATER
+        features =  SUPPORT_AWAY_MODE | SUPPORT_OPERATION_MODE
+        if (not self._device.aquanta_intelligence_active):
+            features |= SUPPORT_TARGET_TEMPERATURE
+
+        return features
 
     @property
     def current_temperature(self):
-        """Return the current temperature."""
-        return self._data["tempValue"]
+        return self._device.current_temperature
+
+    @property
+    def target_temperature(self):
+        if self._device.aquanta_intelligence_active:
+            return None
+            
+        return self._device.target_temperature
+
+    @property
+    def min_temp(self):
+        return 90
+
+    @property
+    def max_temp(self):
+        return 140
 
     @property
     def is_away_mode_on(self):
-        """Return true if away mode is on."""
-        return self._data["awayRunning"]
+        return self._device.is_away_mode_on
 
     @property
     def name(self):
-        """Return the name of the water heater."""
-        return f'{self._settings["userDescription"]} Water Heater'
+        return self._device.name
 
     @property
     def unique_id(self):
-        return f'{self._location}_water_heater'
+        return self._device.unique_id
 
     @property
     def icon(self):
-        """Return the icon of device."""
         return 'mdi:water-pump'
 
+    def set_temperature(self, **kwargs):
+        temperature = kwargs.get(ATTR_TEMPERATURE)
+        self._device.set_target_temperature(temperature)
+
     def set_operation_mode(self, operation_mode):
-        """Set new target operation mode."""
-        self.check_login()
-
-        if operation_mode == OPERATION_MODE_BOOST:
-            if self.is_away_mode_on:
-                # Turn off away mode first
-                self.turn_away_mode_off()
-
-            response = self._session.put(API_BOOST_MODE_ON, data=self.get_schedule_dictionary())
-            _LOGGER.info(f'Boost mode turned on. Received {API_AWAY_MODE_ON} response, status = {response.status_code}')
-        else:
-            response = self._session.put(API_BOOST_MODE_OFF)
-            _LOGGER.info(f'Boost mode turned off. Received {API_BOOST_MODE_OFF} response, status = {response.status_code}')
-
-        self.check_response(response)
-
-    async def async_set_operation_mode(self, operation_mode):
-        """Set new target operation mode."""
-        await self.hass.async_add_executor_job(self.set_operation_mode, operation_mode)
+        self._device.set_operation_mode(operation_mode)
 
     def turn_away_mode_on(self):
-        """Turn away mode on."""
-        self.check_login()
-
-        response = self._session.put(API_AWAY_MODE_ON, data=self.get_schedule_dictionary())
-        _LOGGER.info(f'Away mode turned on. Received {API_AWAY_MODE_ON} response, status = {response.status_code}')
-        self.check_response(response)
-
-        # Also turn off Boost
-        self.set_operation_mode(OPERATION_MODE_NORMAL)
-
-    async def async_turn_away_mode_on(self):
-        """Turn away mode on."""
-        await self.hass.async_add_executor_job(self.turn_away_mode_on)
+        self._device.set_away_mode(True)
 
     def turn_away_mode_off(self):
-        """Turn away mode off."""
-        self.check_login()
-
-        response = self._session.put(API_AWAY_MODE_OFF)
-        _LOGGER.info(f'Away mode turned off. Received {API_AWAY_MODE_OFF} response, status = {response.status_code}')
-        self.check_response(response)
-
-    async def async_turn_away_mode_off(self):
-        """Turn away mode off."""
-        await self.hass.async_add_executor_job(self.turn_away_mode_off)
+        self._device.set_away_mode(False)
 
     def update(self):
-        try:
-            """Get the latest state."""
-            self.check_login()
-            
-            response = self._session.get(API_GET_URL)
-            _LOGGER.debug(f'Received {API_GET_URL} response, status = {response.status_code}, json = {response.json()}')
-            self.check_response(response)
-            self._data = response.json()
-
-            response = self._session.get(API_SETTINGS_URL)
-            _LOGGER.debug(f'Received {API_SETTINGS_URL} response, status = {response.status_code}, json = {response.json()}')
-            self.check_response(response)
-            self._settings = response.json()
-        except:
-            _LOGGER.error(f'Update error, will try to login and retry on the next update interval.', exc_info=True)
-            self._session = None
+        self._device.update()
