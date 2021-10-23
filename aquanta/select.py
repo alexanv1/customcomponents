@@ -9,8 +9,8 @@ from . import DOMAIN, CONTROL_MODE_INTELLIGENCE, CONTROL_MODE_TEMPERATURE, Aquan
 SCAN_INTERVAL = timedelta(seconds=30)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    device = hass.data[DOMAIN]
-    async_add_entities([AquantaWaterHeaterControlModeSelect(device)])
+    for device in hass.data[DOMAIN]:
+        async_add_entities([AquantaWaterHeaterControlModeSelect(device)])
 
 class AquantaWaterHeaterControlModeSelect(SelectEntity):
 

@@ -14,14 +14,14 @@ from . import DOMAIN, AquantaWaterHeater
 SCAN_INTERVAL = timedelta(seconds=30)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    device = hass.data[DOMAIN]
+    
+    for device in hass.data[DOMAIN]:
+        entities = [
+                AquantaWaterHeaterTemperatureSensor(device),
+                AquantaWaterHeaderAvailablePercentageSensor(device)
+            ]
 
-    entities = [
-            AquantaWaterHeaterTemperatureSensor(device),
-            AquantaWaterHeaderAvailablePercentageSensor(device)
-        ]
-
-    async_add_entities(entities)
+        async_add_entities(entities)
 
 class AquantaWaterHeaterSensor(SensorEntity):
 

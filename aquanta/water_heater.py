@@ -21,8 +21,8 @@ ATTR_PERFORMANCE_MODE = "performance_mode"
 ATTR_AQUANTA_INTELLIGENCE_ACIVE = "aquanta_intelligence_active"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    device = hass.data[DOMAIN]
-    async_add_entities([AquantaWaterHeaterEntity(device)], update_before_add=True)
+    for device in hass.data[DOMAIN]:
+        async_add_entities([AquantaWaterHeaterEntity(device)], update_before_add=True)
 
 
 class AquantaWaterHeaterEntity(WaterHeaterEntity):

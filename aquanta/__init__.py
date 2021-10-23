@@ -39,69 +39,83 @@ OPERATION_MODE_BOOST = 'Boost'
 CONTROL_MODE_INTELLIGENCE = "Aquanta Intelligence"
 CONTROL_MODE_TEMPERATURE = "Set Temperature"
 
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     username = entry.data[CONF_USERNAME]
     password = entry.data[CONF_PASSWORD]
-    
-    device = AquantaWaterHeater(username, password)
-    await hass.async_add_executor_job(device.update)
-    hass.data[DOMAIN] = device
 
+    session = await hass.async_add_executor_job(login, username, password)
+    locations = await hass.async_add_executor_job(get_locations, session)
+
+    devices = []
+    for location in locations:
+        device = AquantaWaterHeater(username, password, location)
+        await hass.async_add_executor_job(device.update)
+        devices += [device] 
+
+    hass.data[DOMAIN] = devices
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
 
     return True
-    
+
+
+def check_response(response):
+    if response.status_code != 200:
+        _LOGGER.error(f'Operation failed, status = {response.status_code}')    
+
+
+def login(username: str, password: str):
+    session = requests.Session()
+
+    _LOGGER.info(f'Logging in to Aquanta.')
+
+    login_data = dict(email=username, password=password, returnSecureToken=True)
+    verifyPasswordResponse = session.post("https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyBHWHB8Org9BWCH-YFzis-8oEbMaKmI2Tw", data=login_data)
+    _LOGGER.info(f'Received VerifyPassword response, status = {verifyPasswordResponse.status_code}, json = {verifyPasswordResponse.json()}')
+
+    idToken = dict(idToken = verifyPasswordResponse.json()["idToken"])
+    loginResponse = session.post(f"{API_BASE_URL}/login", data=idToken)
+    _LOGGER.info(f'Received login response, status = {loginResponse.status_code}, json = {loginResponse.json()}')
+
+    if loginResponse.status_code != 200:
+        _LOGGER.error(f'Login Failed, status = {loginResponse.status_code}')
+
+    return session
+
+
+def get_locations(session):
+    response = session.get(API_GET_URL)
+    check_response(response)
+        
+    return response.json()["locations"]
+
 
 class AquantaWaterHeater():
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, location):
         self._username = username
         self._password = password
+        self._location = location
 
         self._login_time = None
-
         self._session = None
-        self._location = None
 
         self._data = {}
         self._settings = {}
-
-    def login(self):
-        self._session = requests.Session()
-
-        _LOGGER.info(f'Logging in to Aquanta.')
-
-        login_data = dict(email=self._username, password=self._password, returnSecureToken=True)
-        verifyPasswordResponse = self._session.post("https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyBHWHB8Org9BWCH-YFzis-8oEbMaKmI2Tw", data=login_data)
-        _LOGGER.info(f'Received VerifyPassword response, status = {verifyPasswordResponse.status_code}, json = {verifyPasswordResponse.json()}')
-
-        idToken = dict(idToken = verifyPasswordResponse.json()["idToken"])
-        loginResponse = self._session.post(f"{API_BASE_URL}/login", data=idToken)
-        _LOGGER.info(f'Received login response, status = {loginResponse.status_code}, json = {loginResponse.json()}')
-
-        if loginResponse.status_code != 200:
-            _LOGGER.error(f'Login Failed, status = {loginResponse.status_code}')
-        else:
-            self._login_time = datetime.now()
-            self.set_location()
     
     def check_login(self):
         if self._session is None or (datetime.now() - self._login_time > timedelta(minutes = 30)):
             # Login again after 30 minutes
-            self.login()
+            self._session = login(self._username, self._password)
+            self._login_time = datetime.now()
 
-    def check_response(self, response):
-        if response.status_code != 200:
-            _LOGGER.error(f'Operation failed, status = {response.status_code}')
+            self.set_location()
 
     def set_location(self):
-        response = self._session.get(API_GET_URL)
-        locations = response.json()["locations"]
-        self._location = next(iter(locations))
         response = self._session.put(f"{API_SET_LOCATION_URL}{self._location}")
         _LOGGER.info(f'Set location to {self._location}, status = {response.status_code}')
 
-        self.check_response(response)
+        check_response(response)
 
     def get_schedule_dictionary(self):
         start = datetime.now(timezone.utc).astimezone()
@@ -168,7 +182,7 @@ class AquantaWaterHeater():
             response = self._session.put(API_BOOST_MODE_OFF)
             _LOGGER.info(f'Boost mode turned off. Received {API_BOOST_MODE_OFF} response, status = {response.status_code}')
 
-        self.check_response(response)
+        check_response(response)
 
         self.update()
 
@@ -183,7 +197,7 @@ class AquantaWaterHeater():
 
         response = self._session.put(API_SET_SETTINGS_URL, json=json)
         _LOGGER.info(f'Target temperature set to {target_temperature}. Received {API_SET_SETTINGS_URL} response, status = {response.status_code}')
-        self.check_response(response)
+        check_response(response)
 
         self.update()
 
@@ -196,10 +210,9 @@ class AquantaWaterHeater():
                     "setPoint": float(self.settings["setPoint"])
                 }
 
-        _LOGGER.error(f'json = {json}')
         response = self._session.put(API_SET_SETTINGS_URL, json=json)
         _LOGGER.info(f'Aquanta Intelligence set to {active}. Received {API_SET_SETTINGS_URL} response, status = {response.status_code}')
-        self.check_response(response)
+        check_response(response)
 
         self.update()
 
@@ -209,14 +222,14 @@ class AquantaWaterHeater():
         if away_mode:
             response = self._session.put(API_AWAY_MODE_ON, data=self.get_schedule_dictionary())
             _LOGGER.info(f'Away mode turned on. Received {API_AWAY_MODE_ON} response, status = {response.status_code}')
-            self.check_response(response)
+            check_response(response)
 
             # Also turn off Boost
             self.set_operation_mode(OPERATION_MODE_NORMAL)
         else:
             response = self._session.put(API_AWAY_MODE_OFF)
             _LOGGER.info(f'Away mode turned off. Received {API_AWAY_MODE_OFF} response, status = {response.status_code}')
-            self.check_response(response)
+            check_response(response)
 
         self.update()
 
@@ -226,12 +239,12 @@ class AquantaWaterHeater():
             
             response = self._session.get(API_GET_URL)
             _LOGGER.debug(f'Received {API_GET_URL} response, status = {response.status_code}, json = {response.json()}')
-            self.check_response(response)
+            check_response(response)
             self._data = response.json()
 
             response = self._session.get(API_SETTINGS_URL)
             _LOGGER.debug(f'Received {API_SETTINGS_URL} response, status = {response.status_code}, json = {response.json()}')
-            self.check_response(response)
+            check_response(response)
             self._settings = response.json()
         except:
             _LOGGER.error(f'Update error, will try to login and retry on the next update interval.', exc_info=True)
