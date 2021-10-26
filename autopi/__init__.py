@@ -115,6 +115,10 @@ class AutoPiDevice():
         return self._attributes[ATTR_FUEL_LEVEL]
 
     @property
+    def coolant_temperature(self):
+        return self._attributes[ATTR_COOLANT_TEMPERATURE]
+
+    @property
     def device_info(self):
         info = {
             "identifiers": {(DOMAIN, self.unique_id)},
@@ -155,7 +159,6 @@ class AutoPiDevice():
 
         return position_response_json
 
-
     def _get_vehicle_data(self, positions: dict):
         """Update vehicle data."""
 
@@ -188,7 +191,12 @@ class AutoPiDevice():
 
             _LOGGER.debug(f'{self._vehicle_name} - received {url} response, status = {response.status_code}, json = {response_json}')
             if response.status_code == 200:
-                attributes[hass_attribute_names[attribute]] = response_json[0]["value"]
+                hass_attribute_name = hass_attribute_names[attribute]
+                if hass_attribute_name == ATTR_SPEED:
+                    # Convert to MPH
+                    attributes[hass_attribute_name] = response_json[0]["value"] / 1.61
+                else:
+                    attributes[hass_attribute_name] = response_json[0]["value"]
             else:
                 _LOGGER.info(f'{self._vehicle_name} - response status = {response.status_code}, settting {hass_attribute_names[attribute]} to 0')
                 attributes[hass_attribute_names[attribute]] = 0

@@ -2,14 +2,16 @@ from datetime import timedelta
 
 from homeassistant.components.sensor import (
     STATE_CLASS_MEASUREMENT,
+    DEVICE_CLASS_TEMPERATURE,
     SensorEntity,
     SensorEntityDescription,
 )
 
 from homeassistant.const import (
     PERCENTAGE,
-    SPEED_KILOMETERS_PER_HOUR,
+    SPEED_MILES_PER_HOUR,
     PRECISION_WHOLE,
+    TEMP_CELSIUS,
 )
 
 from . import DOMAIN, AutoPiDevice
@@ -22,7 +24,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         entities = [
                 AutoPISpeedSensor(autoPIDevice),
                 AutoPIRPMSensor(autoPIDevice),
-                AutoPIFuelSensor(autoPIDevice)
+                AutoPIFuelSensor(autoPIDevice),
+                AutoPICoolantTemperatureSensor(autoPIDevice)
             ]
 
         async_add_entities(entities)
@@ -49,7 +52,7 @@ class AutoPISpeedSensor(AutoPISensor):
     entity_description = SensorEntityDescription(
         key = "speed",
         state_class = STATE_CLASS_MEASUREMENT,
-        native_unit_of_measurement = SPEED_KILOMETERS_PER_HOUR
+        native_unit_of_measurement = SPEED_MILES_PER_HOUR
     )
 
     def __init__(self, device):
@@ -123,3 +126,31 @@ class AutoPIFuelSensor(AutoPISensor):
     @property
     def icon(self):
         return 'mdi:gas-station'
+
+class AutoPICoolantTemperatureSensor(AutoPISensor):
+
+    entity_description = SensorEntityDescription(
+        key = "coolant_temperature",
+        device_class = DEVICE_CLASS_TEMPERATURE,
+        state_class = STATE_CLASS_MEASUREMENT,
+        native_unit_of_measurement = TEMP_CELSIUS,
+    )
+
+    def __init__(self, device):
+        super().__init__(device)
+
+    @property
+    def name(self):
+        return f"{self._device.name} Coolant Temperature"
+
+    @property
+    def unique_id(self):
+        return f"{self._device.unique_id}_coolant_temperature"
+
+    @property
+    def native_value(self):
+        return int(self._device.coolant_temperature)
+
+    @property
+    def icon(self):
+        return 'mdi:thermometer'
