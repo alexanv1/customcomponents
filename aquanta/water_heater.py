@@ -22,7 +22,7 @@ ATTR_AQUANTA_INTELLIGENCE_ACIVE = "aquanta_intelligence_active"
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     for device in hass.data[DOMAIN]:
-        async_add_entities([AquantaWaterHeaterEntity(device)], update_before_add=True)
+        async_add_entities([AquantaWaterHeaterEntity(device)])
 
 
 class AquantaWaterHeaterEntity(WaterHeaterEntity):
@@ -46,7 +46,7 @@ class AquantaWaterHeaterEntity(WaterHeaterEntity):
     def extra_state_attributes(self):
         return {
             ATTR_HOT_WATER_AVAILABLE_PERCENT: self._device.hot_water_available,
-            ATTR_PERFORMANCE_MODE: self._device.state["efficiencySelection"],
+            ATTR_PERFORMANCE_MODE: self._device.performance_mode,
             ATTR_AQUANTA_INTELLIGENCE_ACIVE: self._device.aquanta_intelligence_active,
         }
 

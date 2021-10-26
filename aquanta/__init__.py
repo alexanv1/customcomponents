@@ -27,6 +27,8 @@ API_SETTINGS_URL = f"{API_BASE_URL}/get/settings"
 
 API_SET_SETTINGS_URL = f"{API_BASE_URL}/set/advancedSettings"
 
+API_EFFICIENCY_SELECTION = f"{API_BASE_URL}/set/efficiencySelection"
+
 API_AWAY_MODE_ON = f"{API_BASE_URL}/set/schedule/away"
 API_AWAY_MODE_OFF = f"{API_BASE_URL}/set/schedule/away/off"
 
@@ -167,6 +169,22 @@ class AquantaWaterHeater():
     @property
     def aquanta_intelligence_active(self):
         return not self.settings["aquantaIntel"]
+
+    @property
+    def performance_mode(self):
+        return self.state["efficiencySelection"]
+
+    def set_performance_mode(self, performance_mode: str):
+        self.check_login()
+
+        if performance_mode is not None:
+            json = {"efficiencySelection": performance_mode}
+
+        response = self._session.put(API_EFFICIENCY_SELECTION, json=json)
+        _LOGGER.info(f'Performance mode set to {performance_mode}. Received {API_SET_SETTINGS_URL} response, status = {response.status_code}')
+        check_response(response)
+
+        self.update()
 
     def set_operation_mode(self, operation_mode: str):
         self.check_login()
