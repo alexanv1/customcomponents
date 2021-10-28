@@ -85,7 +85,7 @@ class MySmartBlindBatterySensor(MySmartBlindSensor):
         state = self._bridge.get_blind_state(self._blind)
         
         if state is not None:
-            if state.battery_level != 0:
+            if state.battery_level > 0:
                 self._battery_level = min(max(state.battery_level, 0), 100)
             self._available = True
         else:
