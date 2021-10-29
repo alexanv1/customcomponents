@@ -123,7 +123,8 @@ class MySmartBlindRssiSensor(MySmartBlindSensor):
         state = self._bridge.get_blind_state(self._blind)
         
         if state is not None:
-            self._rssi = state.rssi
+            if state.rssi < 0:
+                self._rssi = state.rssi
             self._available = True
         else:
             self._available = False

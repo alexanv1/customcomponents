@@ -64,7 +64,7 @@ class AutoPISpeedSensor(AutoPISensor):
 
     @property
     def unique_id(self):
-        return f"{self._device.unique_id}_speed"
+        return f"{self._device.unique_id}_speed_mph"
 
     @property
     def native_value(self):
