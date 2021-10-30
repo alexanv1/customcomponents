@@ -5,22 +5,47 @@ from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.helpers import entity_platform
+
+import voluptuous as vol
 
 from . import DOMAIN, get_device_info
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
+SERVICE_REPEAT_LAST_FEEDING = "repeat_last_feeding"
+SERVICE_FEED = "feed"
+
+ATTR_AMOUNT = "amount"
+
+SERVICE_FEED_SCHEMA = {
+    vol.Required(ATTR_AMOUNT): vol.All(
+        vol.Coerce(int), vol.Range(min=1, max=36)
+    ),
+}
+
 async def async_setup_entry(hass: HomeAssistant, config_entry, async_add_entities):
     """Set up SmartFeed switch entities."""
 
     for feederDevice in hass.data[DOMAIN]:
-        async_add_entities([SmartFeedSwitch(hass, feederDevice)])
+        async_add_entities([SmartFeedSwitch(feederDevice)])
+
+    platform = entity_platform.async_get_current_platform()
+
+    # This will call SmartFeedSwitch.feed(amount=VALUE)
+    platform.async_register_entity_service(
+        SERVICE_REPEAT_LAST_FEEDING, {}, SmartFeedSwitch.repeat_last_feeding.__name__
+    )
+
+    # This will call SmartFeedSwitch.repeat_last_feeding()
+    platform.async_register_entity_service(
+        SERVICE_FEED, SERVICE_FEED_SCHEMA, SmartFeedSwitch.feed.__name__
+    )
 
 class SmartFeedSwitch(SwitchEntity):
     
-    def __init__(self, hass, feeder):
+    def __init__(self, feeder):
         self._feeder = feeder
-        self._hass = hass
 
     def turn_on(self, **kwargs):
         self._feeder.paused = False
@@ -81,3 +106,9 @@ class SmartFeedSwitch(SwitchEntity):
         if self._feeder.data_json["settings"]["pet_type"] == 'cat':
             return 'mdi:cat'
         return 'mdi:dog'
+    
+    def repeat_last_feeding(self):
+        self._feeder.repeat_feed()
+
+    def feed(self, amount : int):
+        self._feeder.feed(amount = amount)

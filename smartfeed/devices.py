@@ -25,7 +25,7 @@ def get_feeders(api_token):
 
 class DeviceSmartFeed:
     def __init__(self, data):
-        self.data = data
+        self._data = data
 
     def __str__(self):
         return self.to_json()
@@ -34,16 +34,16 @@ class DeviceSmartFeed:
         """
         All feeder data formatted as JSON.
         """
-        return json.dumps(self.data, indent=2)
+        return json.dumps(self._data, indent=2)
 
     def update_data(self):
         """
-        Updates self.data to the feeder's current online state.
+        Updates self._data to the feeder's current online state.
 
         """
         response = api.sf_get(self.api_path)
         response.raise_for_status()
-        self.data = json.loads(response.content.decode('UTF-8'))
+        self._data = json.loads(response.content.decode('UTF-8'))
 
     def put_setting(self, setting, value, force_update=False):
         """
@@ -62,7 +62,7 @@ class DeviceSmartFeed:
         if force_update:
             self.update_data()
         else:
-            self.data['settings'][setting] = value
+            self._data['settings'][setting] = value
 
     def get_messages_since(self, days=7):
         """
@@ -83,7 +83,7 @@ class DeviceSmartFeed:
         :return: the feeding message, if found. Otherwise, None.
 
         """
-        messages = self.get_messages_since()
+        messages = self.get_messages_since(days=2)
         for message in messages:
             if message['message_type'] == 'FEED_DONE':
                 return message
@@ -99,7 +99,7 @@ class DeviceSmartFeed:
 
         """
         if slow_feed is None:
-            slow_feed = self.data['settings']['slow_feed']
+            slow_feed = self._data['settings']['slow_feed']
         response = api.sf_post(self.api_path + '/meals', data={
             'amount': amount,
             'slow_feed': slow_feed
@@ -115,7 +115,7 @@ class DeviceSmartFeed:
 
         """
         last_feeding = self.get_last_feeding()
-        self.feed(last_feeding['amount'])
+        self.feed(last_feeding['payload']['amount'])
         
     def prime(self):
         """
@@ -127,7 +127,7 @@ class DeviceSmartFeed:
     @property
     def api_name(self):
         """The feeder's thing_name from the API."""
-        return self.data['thing_name']
+        return self._data['thing_name']
 
     @property
     def api_path(self):
@@ -137,20 +137,20 @@ class DeviceSmartFeed:
     @property
     def id(self):
         """The feeder's ID."""
-        return self.data['id']
+        return self._data['id']
 
     @property
     def battery_voltage(self):
         """The feeder's calculated current battery voltage."""
         try:
-            return round(int(self.data['battery_voltage']) / 32767 * 7.2, 3)
+            return round(int(self._data['battery_voltage']) / 32767 * 7.2, 3)
         except ValueError:
             return -1
 
     @property
     def battery_level(self):
         """The feeder's current battery level (high, medium, low, dead, not installed, unknown)."""
-        if not self.data['is_batteries_installed']:
+        if not self._data['is_batteries_installed']:
             return 'not installed'
         if self.battery_voltage > 5.9:
             return 'high'
@@ -166,26 +166,26 @@ class DeviceSmartFeed:
     @property
     def battery_level_int(self):
         """The feeder's current battery level as an integer."""
-        if not self.data['is_batteries_installed']:
+        if not self._data['is_batteries_installed']:
             return 0
 
         minVoltage = 22755
         maxVoltage = 29100
 
         # Respect max and min bounds
-        voltage = max(min(int(self.data['battery_voltage']), maxVoltage), minVoltage)
+        voltage = max(min(int(self._data['battery_voltage']), maxVoltage), minVoltage)
 
         return round(100 * (voltage - minVoltage) / (maxVoltage - minVoltage))
 
     @property
     def available(self):
         """If true, the feeder is connected\available."""
-        return self.data['connection_status'] == 2
+        return self._data['connection_status'] == 2
         
     @property
     def paused(self):
         """If true, the feeder will not follow its scheduling."""
-        return self.data['settings']['paused']
+        return self._data['settings']['paused']
     
     @paused.setter
     def paused(self, value):
@@ -194,7 +194,7 @@ class DeviceSmartFeed:
     @property
     def slow_feed(self):
         """If true, the feeder will dispense food slowly."""
-        return self.data['settings']['slow_feed']
+        return self._data['settings']['slow_feed']
 
     @slow_feed.setter
     def slow_feed(self, value):
@@ -203,7 +203,7 @@ class DeviceSmartFeed:
     @property
     def child_lock(self):
         """If true, the feeder's physical button is disabled."""
-        return self.data['settings']['child_lock']
+        return self._data['settings']['child_lock']
 
     @child_lock.setter
     def child_lock(self, value):
@@ -212,7 +212,7 @@ class DeviceSmartFeed:
     @property
     def friendly_name(self):
         """The feeder's display name."""
-        return self.data['settings']['friendly_name']
+        return self._data['settings']['friendly_name']
 
     @friendly_name.setter
     def friendly_name(self, value):
@@ -221,7 +221,7 @@ class DeviceSmartFeed:
     @property
     def pet_type(self):
         """The feeder's pet type."""
-        return self.data['settings']['pet_type']
+        return self._data['settings']['pet_type']
 
     @pet_type.setter
     def pet_type(self, value):
@@ -230,7 +230,7 @@ class DeviceSmartFeed:
     @property
     def food_sensor_current(self):
         """The feeder's food sensor status."""
-        return self.data['food_sensor_current']
+        return self._data['food_sensor_current']
 
     @property
     def food_low_status(self):
@@ -238,8 +238,8 @@ class DeviceSmartFeed:
         The feeder's food low status.
         :return: 0 if Full, 1 if Low, 2 if Empty
         """
-        return int(self.data['is_food_low'])
+        return int(self._data['is_food_low'])
 
     @property
     def data_json(self):
-        return self.data
+        return self._data
