@@ -97,7 +97,7 @@ class SmartFeedLastFeedingSensor(SmartFeedSensor):
         last_feeding_local_string = last_feeding_local.strftime('%x %H:%M')
         last_feeding_amount = self._last_feeding['payload']['amount']
 
-        return f'Last fed: {last_feeding_local_string}, Amount: {last_feeding_amount / 8} cups'
+        return f'Last: {last_feeding_local_string}, {last_feeding_amount / 8} cups'
 
     def update(self):
         if self._update_counter is None or self._update_counter == 20:
