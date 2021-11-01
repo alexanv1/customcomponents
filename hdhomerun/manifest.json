@@ -1,0 +1,10 @@
+{
+    "domain": "hdhomerun",
+    "name": "HDHomeRun",
+    "version": "1.0.0",
+    "config_flow": true,
+    "documentation": "https://www.silicondust.com/",
+    "requirements": [],
+    "dependencies": [],
+    "codeowners": []
+  }
