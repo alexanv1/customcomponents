@@ -108,7 +108,6 @@ class HDHomeRunInfoSensor(HDHomeRunSensor):
     entity_description = SensorEntityDescription(
         key="info",
         name="Info",
-        state_class=STATE_CLASS_MEASUREMENT,
     )
 
     def update(self):
@@ -144,7 +143,6 @@ class HDHomeRunTunerSensor(HDHomeRunSensor):
         self.entity_description = SensorEntityDescription(
             key=f"tuner_{self._tuner_index + 1}_status",
             name=f"Tuner {self._tuner_index + 1} Status",
-            state_class=STATE_CLASS_MEASUREMENT,
         )
 
     def update(self):
