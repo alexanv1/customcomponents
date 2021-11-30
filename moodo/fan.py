@@ -26,7 +26,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     global API_TOKEN
 
     API_TOKEN = config_entry.data[CONF_API_TOKEN]
-    HEADERS = {"token": API_TOKEN, "accept":"application/json"}
+    HEADERS = {"token": API_TOKEN, "accept":"application/json", "user-agent":"SomeUserAgent"}
 
     # Get the Moodo boxes
     resp = await hass.async_add_executor_job(get_devices)
@@ -41,7 +41,7 @@ def get_devices():
     resp = requests.get(API_BASE_URL, headers=HEADERS)
     if resp.status_code != 200:
         # Something went wrong
-        raise Exception('GET {} failed with status {}, error: {}'.format(API_BASE_URL, resp.status_code, resp.json()["error"]))
+        raise Exception('GET {} failed with status {}, error: {}'.format(API_BASE_URL, resp.status_code, resp.text))
     return resp
 
 class MoodoDevice(FanEntity):
@@ -145,7 +145,7 @@ class MoodoDevice(FanEntity):
         resp = requests.post(API_BASE_URL, json=json, headers=HEADERS)
         if resp.status_code != 200:
             # Something went wrong
-            raise Exception('POST {} (payload={}) for {} failed with status {}, error {}'.format(API_BASE_URL, json, self._device_name, resp.status_code, resp.json()))
+            raise Exception('POST {} (payload={}) for {} failed with status {}, error {}'.format(API_BASE_URL, json, self._device_name, resp.status_code, resp.text))
 
         self._fan_volume = fan_volume
         self._state = state
@@ -205,7 +205,7 @@ class MoodoDevice(FanEntity):
                 resp = requests.get(self._API_BOX_URL, headers=HEADERS)
                 if resp.status_code != 200:
                     # Something went wrong
-                    raise Exception('GET {} failed with status {}, error: {}'.format(self._API_BOX_URL, resp.status_code, resp.json()["error"]))
+                    raise Exception('GET {} failed with status {}, error: {}'.format(self._API_BOX_URL, resp.status_code, resp.text))
 
                 break
             except Exception as err:
