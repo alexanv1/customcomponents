@@ -119,12 +119,17 @@ class HDHomeRunInfoSensor(HDHomeRunSensor):
 
     @property
     def extra_state_attributes(self):
+
+        upgrade_available = None
+        if self._device.device_data.has_key("UpgradeAvailable"):
+            upgrade_available = self._device.device_data["UpgradeAvailable"]
+
         return {
             "FirmwareName": self._device.device_data["FirmwareName"],
             "FirmwareVersion": self._device.device_data["FirmwareVersion"],
             "DeviceID": self._device.device_data["DeviceID"],
             "DeviceAuth": self._device.device_data["DeviceAuth"],
-            "UpgradeAvailable": self._device.device_data["UpgradeAvailable"],
+            "UpgradeAvailable": upgrade_available,
             "BaseURL": self._device.device_data["BaseURL"],
             "LineupURL": self._device.device_data["LineupURL"],
             "ConditionalAccess": self._device.device_data["ConditionalAccess"],
