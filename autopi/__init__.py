@@ -81,7 +81,7 @@ class AutoPiDevice():
         self._vehicle_name = f'{device["vehicle"]["year"]} {device["vehicle"]["display"]}'
 
         self._location = []
-        self._attributes = []
+        self._attributes = {}
 
     @property
     def name(self):
