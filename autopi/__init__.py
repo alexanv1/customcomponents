@@ -56,13 +56,14 @@ def get_devices(username, password):
 
     login_data = {"email": username, "password": password}
     login_response = requests.post(API_LOGIN_URL, data = login_data)
-    login_response_json = login_response.json()
-
-    _LOGGER.info(f'Received login response, status = {login_response.status_code}, json = {login_response_json}')
 
     if login_response.status_code != 200:
-        _LOGGER.error(f'Login Failed, status = {login_response.status_code}')
+        _LOGGER.error(f'Login Failed, status = {login_response.status_code}, response = "{login_response.text}"')
+        login_response.raise_for_status()
     else:
+        login_response_json = login_response.json()
+        _LOGGER.info(f'Received login response json = {login_response_json}')
+
         _HEADERS = {'Authorization': f'Bearer {login_response_json["token"]}' }
         devices = login_response_json["user"]["devices"]
 
@@ -146,16 +147,23 @@ class AutoPiDevice():
         """Update the latest position for all devices."""
 
         position_response = requests.get(API_POSITION_URL, headers = _HEADERS)
-        position_response_json = position_response.json()
-        _LOGGER.debug(f'Received {API_POSITION_URL} response, status = {position_response.status_code}, json = {position_response_json}')
 
-        if position_response.status_code != 200:
+        if position_response.status_code == 200:
+            position_response_json = position_response.json()
+            _LOGGER.debug(f'Received {API_POSITION_URL} response, json = {position_response_json}')
+        else:
+            _LOGGER.info(f'{self._vehicle_name} - getting positions failed, will retry. Status = {position_response.status_code}, response = {position_response.text}')
+
             get_devices(self._username, self._password)
 
             # Get device positions again
             position_response = requests.get(API_POSITION_URL, headers = _HEADERS)
-            position_response_json = position_response.json()
-            _LOGGER.debug(f'Received {API_POSITION_URL} response, status = {position_response.status_code}, json = {position_response_json}')
+            if position_response.status_code == 200:
+                position_response_json = position_response.json()
+                _LOGGER.debug(f'Received {API_POSITION_URL} response, json = {position_response_json}')
+            else:
+                _LOGGER.error(f'{self._vehicle_name} - getting positions failed. Status = {position_response.status_code}, response = {position_response.text}')
+                position_response.raise_for_status()
 
         return position_response_json
 
@@ -163,12 +171,11 @@ class AutoPiDevice():
         """Update vehicle data."""
 
         self._location = positions[0]["location"]
-        self._attributes = self._get_vehicle_attributes()
+        self._get_vehicle_attributes()
         _LOGGER.info(f"{self._vehicle_name} -  location: {self._location}, attributes {self._attributes}")
 
     def _get_vehicle_attributes(self):
         """Update vehicle attributes."""
-        attributes = {}
 
         attribute_types =  {
             'obd.fuel_level.value': 'float',
@@ -187,18 +194,16 @@ class AutoPiDevice():
             url = f'{API_STORAGE_READ_URL}{self._device_id}&field={attribute}&field_type={attribute_type}&aggregation=none&from_utc={from_utc}&size=1'
 
             response = requests.get(url, headers = _HEADERS)
-            response_json = response.json()
 
-            _LOGGER.debug(f'{self._vehicle_name} - received {url} response, status = {response.status_code}, json = {response_json}')
             if response.status_code == 200:
+                response_json = response.json()
+                _LOGGER.debug(f'{self._vehicle_name} - received {url} response, json = {response_json}')
+
                 hass_attribute_name = hass_attribute_names[attribute]
                 if hass_attribute_name == ATTR_SPEED:
                     # Convert to MPH
-                    attributes[hass_attribute_name] = response_json[0]["value"] / 1.61
+                    self._attributes[hass_attribute_name] = response_json[0]["value"] / 1.61
                 else:
-                    attributes[hass_attribute_name] = response_json[0]["value"]
+                    self._attributes[hass_attribute_name] = response_json[0]["value"]
             else:
-                _LOGGER.info(f'{self._vehicle_name} - response status = {response.status_code}, settting {hass_attribute_names[attribute]} to 0')
-                attributes[hass_attribute_names[attribute]] = 0
-
-        return attributes
+                _LOGGER.error(f'{self._vehicle_name} - getting attributes failed. Response status = {response.status_code}, response = {response.text}')
