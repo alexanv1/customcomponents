@@ -5,6 +5,7 @@ Simple platform to control Moodo Aroma Diffuser devices
 import logging
 import requests
 import socketio
+from datetime import datetime
 from datetime import timedelta
 
 from homeassistant.components.fan import (FanEntity, SUPPORT_SET_SPEED)
@@ -26,7 +27,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     global API_TOKEN
 
     API_TOKEN = config_entry.data[CONF_API_TOKEN]
-    HEADERS = {"token": API_TOKEN, "accept":"application/json", "user-agent":"SomeUserAgent"}
+    HEADERS = {"token": API_TOKEN, "accept":"application/json", "user-agent":f"SomeUserAgent {datetime.utcnow()}"}
 
     # Get the Moodo boxes
     resp = await hass.async_add_executor_job(get_devices)
