@@ -19,7 +19,7 @@ _HEADERS = {}
 
 API_BASE_URL = "https://api.autopi.io"
 API_LOGIN_URL = f"{API_BASE_URL}/auth/login/"
-API_POSITION_URL = f"{API_BASE_URL}/logbook/most_recent_positions/"
+API_POSITION_URL = f"{API_BASE_URL}/logbook/most_recent_position/?device_id="
 API_STORAGE_READ_URL = f"{API_BASE_URL}/logbook/storage/read/?device_id="
 
 ATTR_FUEL_LEVEL = "fuel_level"
@@ -135,34 +135,33 @@ class AutoPiDevice():
         
         _LOGGER.debug(f"Updating AutoPi device: {self._vehicle_name}")
 
-        position_response_json = self._get_positions()
+        position_response_json = self._get_position()
+        _LOGGER.debug(f'Found position data for device with unit_id = {self._unit_id}')
+        self._get_vehicle_data(position_response_json)
+                
 
-        for record in position_response_json:
-            if record["unit_id"] == self._unit_id:
-                _LOGGER.debug(f'Found position data for device with unit_id = {self._unit_id}')
-                self._get_vehicle_data(record["positions"])
-                break
+    def _get_position(self):
+        """Update the latest position for the device."""
 
-    def _get_positions(self):
-        """Update the latest position for all devices."""
+        url = f'{API_POSITION_URL}{self._device_id}'
 
-        position_response = requests.get(API_POSITION_URL, headers = _HEADERS)
+        position_response = requests.get(url, headers = _HEADERS)
 
         if position_response.status_code == 200:
             position_response_json = position_response.json()
-            _LOGGER.debug(f'Received {API_POSITION_URL} response, json = {position_response_json}')
+            _LOGGER.debug(f'Received {url} response, json = {position_response_json}')
         else:
-            _LOGGER.info(f'{self._vehicle_name} - getting positions failed, will retry. Status = {position_response.status_code}, response = {position_response.text}')
+            _LOGGER.info(f'{self._vehicle_name} - getting position failed, will retry. Status = {position_response.status_code}, response = {position_response.text}')
 
             get_devices(self._username, self._password)
 
             # Get device positions again
-            position_response = requests.get(API_POSITION_URL, headers = _HEADERS)
+            position_response = requests.get(url, headers = _HEADERS)
             if position_response.status_code == 200:
                 position_response_json = position_response.json()
-                _LOGGER.debug(f'Received {API_POSITION_URL} response, json = {position_response_json}')
+                _LOGGER.debug(f'Received {url} response, json = {position_response_json}')
             else:
-                _LOGGER.error(f'{self._vehicle_name} - getting positions failed. Status = {position_response.status_code}, response = {position_response.text}')
+                _LOGGER.error(f'{self._vehicle_name} - getting position failed. Status = {position_response.status_code}, response = {position_response.text}')
                 position_response.raise_for_status()
 
         return position_response_json
@@ -170,7 +169,7 @@ class AutoPiDevice():
     def _get_vehicle_data(self, positions: dict):
         """Update vehicle data."""
 
-        self._location = positions[0]["location"]
+        self._location = positions["location"]
         self._get_vehicle_attributes()
         _LOGGER.info(f"{self._vehicle_name} -  location: {self._location}, attributes {self._attributes}")
 
