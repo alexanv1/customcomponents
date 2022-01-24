@@ -17,6 +17,8 @@ _LOGGER = logging.getLogger(__name__)
 
 _HEADERS = {}
 
+SKIP_ATTRIBUTE_UPDATE_MAX = 5
+
 API_BASE_URL = "https://api.autopi.io"
 API_LOGIN_URL = f"{API_BASE_URL}/auth/login/"
 API_POSITION_URL = f"{API_BASE_URL}/logbook/most_recent_position/?device_id="
@@ -26,6 +28,8 @@ ATTR_FUEL_LEVEL = "fuel_level"
 ATTR_SPEED = "speed"
 ATTR_RPM = "rpm"
 ATTR_COOLANT_TEMPERATURE = "coolant_temperature"
+ATTR_BATTERY_LEVEL = "battery_level"
+ATTR_BATTERY_VOLTAGE = "battery_voltage"
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Set up AutoPi from a config entry."""
@@ -83,6 +87,9 @@ class AutoPiDevice():
         self._location = []
         self._attributes = {}
 
+        # Reduce the frequency of attribute updates to avoid slowing down position update and reduce the number of calls to AutoPI cloud API
+        self._skip_attribute_update_counter = SKIP_ATTRIBUTE_UPDATE_MAX
+
     @property
     def name(self):
         return self._vehicle_name
@@ -120,6 +127,14 @@ class AutoPiDevice():
         return self._attributes[ATTR_COOLANT_TEMPERATURE]
 
     @property
+    def battery_level(self):
+        return self._attributes[ATTR_BATTERY_LEVEL]
+
+    @property
+    def battery_voltage(self):
+        return self._attributes[ATTR_BATTERY_VOLTAGE]
+
+    @property
     def device_info(self):
         info = {
             "identifiers": {(DOMAIN, self.unique_id)},
@@ -134,10 +149,7 @@ class AutoPiDevice():
         """Update the device info."""
         
         _LOGGER.debug(f"Updating AutoPi device: {self._vehicle_name}")
-
-        position_response_json = self._get_position()
-        _LOGGER.debug(f'Found position data for device with unit_id = {self._unit_id}')
-        self._get_vehicle_data(position_response_json)
+        self._get_vehicle_data()
                 
 
     def _get_position(self):
@@ -166,12 +178,20 @@ class AutoPiDevice():
 
         return position_response_json
 
-    def _get_vehicle_data(self, positions: dict):
+    def _get_vehicle_data(self):
         """Update vehicle data."""
 
-        self._location = positions["location"]
-        self._get_vehicle_attributes()
-        _LOGGER.info(f"{self._vehicle_name} -  location: {self._location}, attributes {self._attributes}")
+        position = self._get_position()
+        _LOGGER.debug(f'Found position data for device with unit_id = {self._unit_id}')
+        self._location = position["location"]
+
+        if self._skip_attribute_update_counter == SKIP_ATTRIBUTE_UPDATE_MAX:
+            self._skip_attribute_update_counter = 0
+            self._get_vehicle_attributes()
+            _LOGGER.info(f"{self._vehicle_name} - location: {self._location}, attributes {self._attributes}")
+        else:
+            self._skip_attribute_update_counter += 1
+            _LOGGER.info(f"{self._vehicle_name} - location: {self._location}, skipping attribute update, skip_attribute_update_counter={self._skip_attribute_update_counter}")
 
     def _get_vehicle_attributes(self):
         """Update vehicle attributes."""
@@ -180,12 +200,16 @@ class AutoPiDevice():
             'obd.fuel_level.value': 'float',
             'obd.speed.value': 'float',
             'obd.rpm.value': 'float',
-            'obd.coolant_temp.value': 'long'}
+            'obd.coolant_temp.value': 'long',
+            'obd.bat.voltage': 'float',
+            'obd.bat.level': 'long'}
         hass_attribute_names = {
             'obd.fuel_level.value': ATTR_FUEL_LEVEL,
             'obd.speed.value': ATTR_SPEED,
             'obd.rpm.value': ATTR_RPM,
-            'obd.coolant_temp.value': ATTR_COOLANT_TEMPERATURE}
+            'obd.coolant_temp.value': ATTR_COOLANT_TEMPERATURE,
+            'obd.bat.voltage': ATTR_BATTERY_VOLTAGE,
+            'obd.bat.level': ATTR_BATTERY_LEVEL}
 
         from_utc = "2020-01-01T00:00:00Z"
 

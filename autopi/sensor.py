@@ -3,6 +3,7 @@ from datetime import timedelta
 from homeassistant.components.sensor import (
     STATE_CLASS_MEASUREMENT,
     DEVICE_CLASS_TEMPERATURE,
+    DEVICE_CLASS_VOLTAGE,
     SensorEntity,
     SensorEntityDescription,
 )
@@ -10,8 +11,10 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     PERCENTAGE,
     SPEED_MILES_PER_HOUR,
+    PRECISION_TENTHS,
     PRECISION_WHOLE,
     TEMP_CELSIUS,
+    ELECTRIC_POTENTIAL_VOLT
 )
 
 from . import DOMAIN, AutoPiDevice
@@ -25,7 +28,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 AutoPISpeedSensor(autoPIDevice),
                 AutoPIRPMSensor(autoPIDevice),
                 AutoPIFuelSensor(autoPIDevice),
-                AutoPICoolantTemperatureSensor(autoPIDevice)
+                AutoPICoolantTemperatureSensor(autoPIDevice),
+                AutoPIBatteryLevelSensor(autoPIDevice),
+                AutoPIBatteryVoltageSensor(autoPIDevice)
             ]
 
         async_add_entities(entities)
@@ -154,3 +159,62 @@ class AutoPICoolantTemperatureSensor(AutoPISensor):
     @property
     def icon(self):
         return 'mdi:thermometer'
+
+class AutoPIBatteryLevelSensor(AutoPISensor):
+
+    entity_description = SensorEntityDescription(
+        key = "battery_level",
+        state_class = STATE_CLASS_MEASUREMENT,
+        native_unit_of_measurement = PERCENTAGE
+    )
+
+    def __init__(self, device):
+        super().__init__(device)
+
+    @property
+    def name(self):
+        return f"{self._device.name} Battery Level"
+
+    @property
+    def unique_id(self):
+        return f"{self._device.unique_id}_battery_level"
+
+    @property
+    def native_value(self):
+        return int(self._device.battery_level)
+
+    @property
+    def icon(self):
+        return 'mdi:battery'
+
+class AutoPIBatteryVoltageSensor(AutoPISensor):
+
+    entity_description = SensorEntityDescription(
+        key = "battery_voltage",
+        device_class = DEVICE_CLASS_VOLTAGE,
+        state_class = STATE_CLASS_MEASUREMENT,
+        native_unit_of_measurement = ELECTRIC_POTENTIAL_VOLT,
+    )
+
+    def __init__(self, device):
+        super().__init__(device)
+
+    @property
+    def name(self):
+        return f"{self._device.name} Battery Voltage"
+
+    @property
+    def unique_id(self):
+        return f"{self._device.unique_id}_battery_voltage"
+
+    @property
+    def precision(self):
+        return PRECISION_TENTHS
+
+    @property
+    def native_value(self):
+        return self._device.battery_voltage
+
+    @property
+    def icon(self):
+        return 'mdi:battery-plus-variant'

@@ -8,7 +8,7 @@ from homeassistant.components.device_tracker.config_entry import TrackerEntity
 
 from . import DOMAIN, AutoPiDevice
 
-SCAN_INTERVAL = timedelta(seconds=15)
+SCAN_INTERVAL = timedelta(seconds=10)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up of the AutoPi devices."""
