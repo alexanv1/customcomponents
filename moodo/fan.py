@@ -3,7 +3,8 @@ Simple platform to control Moodo Aroma Diffuser devices
 """
 
 import logging
-import requests
+import aiohttp
+import asyncio
 import socketio
 from datetime import datetime
 from datetime import timedelta
@@ -20,6 +21,8 @@ API_BASE_URL = "https://rest.moodo.co/api/boxes"
 API_TOKEN = None
 HEADERS = None
 
+SOCKETIO_LOCK = asyncio.Lock()
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up of the Moodo devices."""
 
@@ -30,24 +33,29 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     HEADERS = {"token": API_TOKEN, "accept":"application/json", "user-agent":f"SomeUserAgent {datetime.utcnow()}"}
 
     # Get the Moodo boxes
-    resp = await hass.async_add_executor_job(get_devices)
+    resp_json = await get_devices()
 
     # Enumerate Moodo boxes and create a device for each one
-    for moodo_json in resp.json()['boxes']:
-        moodo = MoodoDevice(hass, moodo_json['device_key'], moodo_json['id'], moodo_json['name'])
+    for moodo_json in resp_json['boxes']:
+        moodo = MoodoDevice(moodo_json['device_key'], moodo_json['id'], moodo_json['name'])
         async_add_entities([moodo], update_before_add=True)
 
-def get_devices():
+async def get_devices():
     _LOGGER.debug("Sending GET to {} with headers={}".format(API_BASE_URL, HEADERS))
-    resp = requests.get(API_BASE_URL, headers=HEADERS)
-    if resp.status_code != 200:
-        # Something went wrong
-        raise Exception('GET {} failed with status {}, error: {}'.format(API_BASE_URL, resp.status_code, resp.text))
-    return resp
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(API_BASE_URL, headers = HEADERS) as resp:
+            if resp.status != 200:
+                # Something went wrong
+                raise Exception('GET {} failed with status {}, error: {}'.format(API_BASE_URL, resp.status, await resp.text()))
+
+            return await resp.json()
+
+UPDATE_COUNTER_VALUE_TO_UPDATE_VIA_REST = 10
 
 class MoodoDevice(FanEntity):
     
-    def __init__(self, hass, device_key, device_id, device_name):
+    def __init__(self, device_key, device_id, device_name):
         self._update_counter = 0
         self._added_to_hass = False
         self._device_key = device_key
@@ -68,40 +76,40 @@ class MoodoDevice(FanEntity):
     async def async_added_to_hass(self):
         self._added_to_hass = True
 
-    def listen_for_websocket_events(self):
-        self._socketio = socketio.Client()
+    async def listen_for_websocket_events(self):
+        async with SOCKETIO_LOCK:
+            self._socketio = socketio.AsyncClient()
 
-        # Register socket.io event handlers
-        _LOGGER.debug(f'{self._device_name}: Registering for websocket events...')
-        self._socketio.on('connect', self.socketio_connect_handler)
-        self._socketio.on('disconnect', self.socketio_disconnect_handler)
-        self._socketio.on('log', self.socketio_log_handler)
-        self._socketio.on('ws_event', self.socketio_event_handler)
+            # Register socket.io event handlers
+            _LOGGER.debug(f'{self._device_name}: Registering for websocket events...')
+            self._socketio.on('connect', self.socketio_connect_handler)
+            self._socketio.on('disconnect', self.socketio_disconnect_handler)
+            self._socketio.on('log', self.socketio_log_handler)
+            self._socketio.on('ws_event', self.socketio_event_handler)
 
-        try:
-            # Open the socket.io connection
-            self._socketio.connect('https://ws.moodo.co:9090')
-        except Exception as exception:
-            # TODO: log
-            _LOGGER.error(f'Failed to connect socket.io for {self._device_name}, will retry. Exception: {exception}')
-            self._socketio = None
+            try:
+                # Open the socket.io connection
+                await self._socketio.connect('https://ws.moodo.co:9090')
+            except Exception as exception:
+                _LOGGER.error(f'Failed to connect socket.io for {self._device_name}, will retry. Exception: {exception}')
+                self._socketio = None
 
-    def socketio_connect_handler(self):
+    async def socketio_connect_handler(self):
         _LOGGER.info(f'Socket.io connected for {self._device_name}')
 
         if self._socketio is not None:
             # Authenticate since we're now connected
-            self._socketio.emit('authenticate', API_TOKEN, False)
+            await self._socketio.emit('authenticate', API_TOKEN, False)
 
-    def socketio_disconnect_handler(self):
+    async def socketio_disconnect_handler(self):
         _LOGGER.info(f'Socket.io disconnected for {self._device_name}')
         self._socketio = None
 
-    def socketio_log_handler(self, message):
+    async def socketio_log_handler(self, message):
         _LOGGER.info(f'Socket.io log message received for {self._device_name}, message: {message}')
 
         if (message.startswith("Authenticated")) and self._socketio is not None:
-            self._socketio.emit('subscribe', self._device_id)
+            await self._socketio.emit('subscribe', self._device_id)
 
     def socketio_event_handler(self, event):
         _LOGGER.info(f'Socket.io event received for {self._device_name}, event: {event}')
@@ -109,7 +117,7 @@ class MoodoDevice(FanEntity):
         if event["type"] == "box_config":
             self.update_state(event["data"])
 
-    def set_state(self, state, fan_volume):
+    async def async_set_state(self, state, fan_volume):
 
         fan_speed = 0
         if state == True:
@@ -143,15 +151,16 @@ class MoodoDevice(FanEntity):
                 }
 
         _LOGGER.debug("Sending POST to {} with headers={} json={}".format(API_BASE_URL, HEADERS, json))
-        resp = requests.post(API_BASE_URL, json=json, headers=HEADERS)
-        if resp.status_code != 200:
-            # Something went wrong
-            raise Exception('POST {} (payload={}) for {} failed with status {}, error {}'.format(API_BASE_URL, json, self._device_name, resp.status_code, resp.text))
+        async with aiohttp.ClientSession() as session:
+            async with session.post(API_BASE_URL, json=json, headers = HEADERS) as resp:
+                if resp.status != 200:
+                    # Something went wrong
+                    raise Exception('POST {} (payload={}) for {} failed with status {}, error {}'.format(API_BASE_URL, json, self._device_name, resp.status, await resp.text()))
 
         self._fan_volume = fan_volume
         self._state = state
 
-    def turn_on(
+    async def async_turn_on(
         self,
         percentage: int = None,
         **kwargs,
@@ -164,16 +173,16 @@ class MoodoDevice(FanEntity):
         if fan_volume == 0:
             fan_volume = 75
 
-        self.set_state(True, fan_volume)
+        await self.async_set_state(True, fan_volume)
 
-    def turn_off(self, **kwargs):
-        self.set_state(False, 0)
+    async def async_turn_off(self, **kwargs):
+        await self.async_set_state(False, 0)
 
-    def set_percentage(self, percentage: int) -> None:
+    async def async_set_percentage(self, percentage: int) -> None:
         if percentage == 0:
-            self.turn_off()
+            await self.async_turn_off()
         else:
-            self.set_state(True, percentage)
+            await self.async_set_state(True, percentage)
 
     def update_state(self, data):
         self._data = data
@@ -195,46 +204,49 @@ class MoodoDevice(FanEntity):
             _LOGGER.debug(f'{self._device_name}: Calling schedule_update_ha_state()')
             self.schedule_update_ha_state()
 
-    def update_via_REST(self):
+    async def update_via_REST(self):
         
         # Retry 3 times
         MAX_RETRIES = 3
-        for x in range(MAX_RETRIES):
-            resp = None
-            try:
-                _LOGGER.debug("Sending GET to {} with headers={}".format(self._API_BOX_URL, HEADERS))
-                resp = requests.get(self._API_BOX_URL, headers=HEADERS)
-                if resp.status_code != 200:
-                    # Something went wrong
-                    raise Exception('GET {} failed with status {}, error: {}'.format(self._API_BOX_URL, resp.status_code, resp.text))
 
-                break
-            except Exception as err:
-                if x == (MAX_RETRIES - 1):
-                    _LOGGER.error('GET {} failed with exception {}'.format(self._API_BOX_URL, err))
-                    return      # Just return out, state will be left as what it was previously
+        async with aiohttp.ClientSession() as session:
+        
+            for x in range(MAX_RETRIES):
+                try:
+                    _LOGGER.debug("Sending GET to {} with headers={}".format(self._API_BOX_URL, HEADERS))
+                    async with session.get(self._API_BOX_URL, headers = HEADERS) as resp:
+                        
+                        if resp.status != 200:
+                            # Something went wrong
+                            raise Exception('GET {} failed with status {}, error: {}'.format(self._API_BOX_URL, resp.status, await resp.text()))
 
-                _LOGGER.warning('GET {} failed with exception {}. Will retry'.format(self._API_BOX_URL, err))
+                        resp_json = await resp.json()
+                        self.update_state(resp_json["box"])
+                        return
 
-        self.update_state(resp.json()["box"])
+                except Exception as err:
+                    
+                    if x == (MAX_RETRIES - 1):
+                        _LOGGER.error('GET {} failed with exception {}'.format(self._API_BOX_URL, err))
+                        return      # Just return out, state will be left as what it was previously
 
-    def update(self):
+                    _LOGGER.warning('GET {} failed with exception {}. Will retry'.format(self._API_BOX_URL, err))
 
-        UPDATE_COUNTER_VALUE_TO_UPDATE_VIA_REST = 10
+    async def async_update(self):
 
         self._update_counter += 1
 
         # Check if we have a socket.io connection and try to reconnect if we don't
         if self._socketio is None:
-            self.listen_for_websocket_events()
+            await self.listen_for_websocket_events()
 
             # Refresh via REST since we may have missed updates when websocket wasn't connected
-            _LOGGER.debug(f'{self._device_name}: Will update via REST since websocket is not connected')
-            self.update_via_REST()
+            _LOGGER.debug(f'{self._device_name}: Will update via REST since websocket was not connected')
+            await self.update_via_REST()
         elif self._update_counter == UPDATE_COUNTER_VALUE_TO_UPDATE_VIA_REST:
             # Update via REST since we reached the counter threshold
             _LOGGER.debug(f'{self._device_name}: Will update via REST since we reached the update counter threshold')
-            self.update_via_REST()
+            await self.update_via_REST()
             self._update_counter = 0
 
     @property
