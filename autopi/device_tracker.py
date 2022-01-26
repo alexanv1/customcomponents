@@ -59,5 +59,5 @@ class AutoPiDeviceTracker(TrackerEntity):
     def device_info(self):
         return self._device.device_info
 
-    def update(self):
-        self._device.update()
+    async def async_update(self):
+        await self._device.update()
