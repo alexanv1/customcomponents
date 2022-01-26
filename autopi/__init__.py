@@ -65,7 +65,7 @@ async def get_devices(username, password):
         async with session.post(API_LOGIN_URL, data = login_data) as login_response:
 
             if login_response.status != 200:
-                _LOGGER.error(f'Login Failed, status = {login_response.status_code}, response = "{login_response.text}"')
+                _LOGGER.error(f'Login Failed, status = {login_response.status}, response = "{await login_response.text()}"')
                 login_response.raise_for_status()
             else:
                 login_response_json = await login_response.json()
@@ -184,13 +184,13 @@ class AutoPiDevice():
                 self._location = position_response_json["location"]
 
             elif retry == True:
-                _LOGGER.info(f'{self._vehicle_name} - getting position failed, will retry. Status = {position_response.status_code}, response = {position_response.text}')
+                _LOGGER.info(f'{self._vehicle_name} - getting position failed, will retry. Status = {position_response.status}, response = {await position_response.text()}')
 
                 await get_devices(self._username, self._password)
                 await self._get_position(session, False)
 
             else:
-                _LOGGER.error(f'{self._vehicle_name} - getting position failed. Status = {position_response.status_code}, response = {position_response.text}')
+                _LOGGER.error(f'{self._vehicle_name} - getting position failed. Status = {position_response.status}, response = {await position_response.text()}')
                 position_response.raise_for_status()
 
     def _get_vehicle_attributes(self, session: aiohttp.ClientSession, tasks: list):
@@ -234,4 +234,4 @@ class AutoPiDevice():
                 else:
                     self._attributes[hass_attribute_name] = response_json[0]["value"]
             else:
-                _LOGGER.error(f'{self._vehicle_name} - getting attributes failed. Response status = {response.status_code}, response = {response.text}')
+                _LOGGER.error(f'{self._vehicle_name} - getting attributes failed. Response status = {response.status}, response = {await response.text()}')
