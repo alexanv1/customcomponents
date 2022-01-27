@@ -152,7 +152,7 @@ class AutoPiDevice():
         _LOGGER.debug(f"Updating AutoPi device: {self._vehicle_name}")
         tasks = []
         async with aiohttp.ClientSession() as session:
-            tasks.append(asyncio.ensure_future(self._get_position(session, tasks)))
+            tasks.append(asyncio.ensure_future(self._get_position(session, True)))
     
             skip_attribute_update = False
 
@@ -171,7 +171,7 @@ class AutoPiDevice():
                 _LOGGER.info(f"{self._vehicle_name} - location: {self._location}, attributes {self._attributes}")
                 
 
-    async def _get_position(self, session: aiohttp.ClientSession(), retry = True):
+    async def _get_position(self, session: aiohttp.ClientSession(), retry: bool):
         """Update the latest position for the device."""
 
         url = f'{API_POSITION_URL}{self._device_id}'
