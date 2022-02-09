@@ -75,12 +75,12 @@ def login(username: str, password: str):
 
     login_data = dict(email=username, password=password, returnSecureToken=True)
     verifyPasswordResponse = session.post("https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyBHWHB8Org9BWCH-YFzis-8oEbMaKmI2Tw", data=login_data)
-    check_response(response)
+    check_response(verifyPasswordResponse)
     _LOGGER.info(f'Received VerifyPassword response, status = {verifyPasswordResponse.status_code}, json = {verifyPasswordResponse.json()}')
 
     idToken = dict(idToken = verifyPasswordResponse.json()["idToken"])
     loginResponse = session.post(f"{API_BASE_URL}/login", data=idToken)
-    check_response(response)
+    check_response(loginResponse)
     _LOGGER.info(f'Received login response, status = {loginResponse.status_code}, json = {loginResponse.json()}')
 
     if loginResponse.status_code != 200:
