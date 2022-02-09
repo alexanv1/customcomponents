@@ -61,9 +61,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-def check_response(response):
+def check_response(response: requests.Response):
     if response.status_code != 200:
-        _LOGGER.error(f'Operation failed, status = {response.status_code}')    
+        _LOGGER.error(f'Operation failed, status = {response.status_code}, response = {response.text}')
+    response.raise_for_status()
+          
 
 
 def login(username: str, password: str):
@@ -73,10 +75,12 @@ def login(username: str, password: str):
 
     login_data = dict(email=username, password=password, returnSecureToken=True)
     verifyPasswordResponse = session.post("https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPassword?key=AIzaSyBHWHB8Org9BWCH-YFzis-8oEbMaKmI2Tw", data=login_data)
+    check_response(response)
     _LOGGER.info(f'Received VerifyPassword response, status = {verifyPasswordResponse.status_code}, json = {verifyPasswordResponse.json()}')
 
     idToken = dict(idToken = verifyPasswordResponse.json()["idToken"])
     loginResponse = session.post(f"{API_BASE_URL}/login", data=idToken)
+    check_response(response)
     _LOGGER.info(f'Received login response, status = {loginResponse.status_code}, json = {loginResponse.json()}')
 
     if loginResponse.status_code != 200:
@@ -256,13 +260,13 @@ class AquantaWaterHeater():
             self.check_login()
             
             response = self._session.get(API_GET_URL)
-            _LOGGER.debug(f'Received {API_GET_URL} response, status = {response.status_code}, json = {response.json()}')
             check_response(response)
+            _LOGGER.debug(f'Received {API_GET_URL} response, status = {response.status_code}, json = {response.json()}')
             self._data = response.json()
 
             response = self._session.get(API_SETTINGS_URL)
-            _LOGGER.debug(f'Received {API_SETTINGS_URL} response, status = {response.status_code}, json = {response.json()}')
             check_response(response)
+            _LOGGER.debug(f'Received {API_SETTINGS_URL} response, status = {response.status_code}, json = {response.json()}')
             self._settings = response.json()
         except:
             _LOGGER.error(f'Update error, will try to login and retry on the next update interval.', exc_info=True)
