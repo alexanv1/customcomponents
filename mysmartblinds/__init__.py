@@ -5,7 +5,7 @@ Support for MySmartBlinds Smart Bridge
 import asyncio
 import logging
 
-from . import smartblinds
+from .smartblinds_client.smartblinds import SmartBlindsClient
 
 from collections import defaultdict
 from contextlib import contextmanager
@@ -99,7 +99,7 @@ def get_device_info(blind):
 class MySmartBlindsBridge:
     def __init__(self, hass, username, password):
         self._hass = hass
-        self._sbclient = smartblinds.SmartBlindsClient(username=username, password=password)
+        self._sbclient = SmartBlindsClient(username=username, password=password)
         self._blinds = []
         self._rooms = []
         self._blind_states = {}
