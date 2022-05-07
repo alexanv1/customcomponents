@@ -133,7 +133,7 @@ class MySmartBlindCover(CoverEntity):
 
             _LOGGER.info("Updated %s: %s", self.name, state)
 
-            if state.position is not -1:
+            if state.position != -1:
                 self._position = state.position
 
             self._rssi = state.rssi
