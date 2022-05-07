@@ -3,10 +3,8 @@ import logging
 from homeassistant.const import (ATTR_BATTERY_LEVEL)
 from homeassistant.components.cover import (
     CoverEntity,
+    CoverEntityFeature,
     ATTR_POSITION,
-    SUPPORT_SET_POSITION,
-    SUPPORT_OPEN,
-    SUPPORT_CLOSE,
     DEVICE_CLASS_BLIND
 )
 from homeassistant.components.group.cover import CoverGroup
@@ -74,7 +72,7 @@ class MySmartBlindCover(CoverEntity):
 
     @property
     def supported_features(self):
-        return SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_SET_POSITION
+        return CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.SET_POSITION
 
     @property
     def available(self):

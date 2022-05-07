@@ -1,10 +1,8 @@
 from datetime import timedelta
 
 from homeassistant.components.water_heater import (
-    SUPPORT_OPERATION_MODE,
-    SUPPORT_AWAY_MODE,
-    SUPPORT_TARGET_TEMPERATURE,
     WaterHeaterEntity,
+    WaterHeaterEntityFeature,
 )
 from homeassistant.const import (
     PRECISION_WHOLE,
@@ -63,9 +61,9 @@ class AquantaWaterHeaterEntity(WaterHeaterEntity):
 
     @property
     def supported_features(self):
-        features =  SUPPORT_AWAY_MODE | SUPPORT_OPERATION_MODE
+        features =  WaterHeaterEntityFeature.AWAY_MODE | WaterHeaterEntityFeature.OPERATION_MODE
         if (not self._device.aquanta_intelligence_active):
-            features |= SUPPORT_TARGET_TEMPERATURE
+            features |= WaterHeaterEntityFeature.TARGET_TEMPERATURE
 
         return features
 

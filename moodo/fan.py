@@ -9,7 +9,7 @@ import socketio
 from datetime import datetime
 from datetime import timedelta
 
-from homeassistant.components.fan import (FanEntity, SUPPORT_SET_SPEED)
+from homeassistant.components.fan import (FanEntity, FanEntityFeature)
 
 from . import DOMAIN, CONF_API_TOKEN
 
@@ -295,7 +295,7 @@ class MoodoDevice(FanEntity):
 
     @property
     def supported_features(self):
-        return SUPPORT_SET_SPEED
+        return FanEntityFeature.SET_SPEED
 
     @property
     def icon(self):
