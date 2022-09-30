@@ -71,7 +71,7 @@ class Room:
 
 class SmartBlindsClient:
     AUTH0_DOMAIN = "mysmartblinds.auth0.com"
-    AUTH0_CLIENT_ID = "1d1c3vuqWtpUt1U577QX5gzCJZzm8WOB"
+    AUTH0_CLIENT_ID = "ACJIjX2SncKiDD9hWQiDsoT8Sd4cItzC"
     AUTH0_CONNECTION = "Username-Password-Authentication"
 
     GRAPHQL_ENDPOINT = "https://api.mysmartblinds.com/v1/graphql"
