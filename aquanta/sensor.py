@@ -1,10 +1,10 @@
 from datetime import timedelta
 
 from homeassistant.components.sensor import (
-    DEVICE_CLASS_TEMPERATURE,
-    STATE_CLASS_MEASUREMENT,
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 
 from homeassistant.const import PERCENTAGE, PRECISION_WHOLE, TEMP_FAHRENHEIT
@@ -40,8 +40,8 @@ class AquantaWaterHeaterTemperatureSensor(AquantaWaterHeaterSensor):
 
     entity_description = SensorEntityDescription(
         key = "current_temperature",
-        device_class = DEVICE_CLASS_TEMPERATURE,
-        state_class = STATE_CLASS_MEASUREMENT,
+        device_class = SensorDeviceClass.TEMPERATURE,
+        state_class = SensorStateClass.MEASUREMENT,
         native_unit_of_measurement = TEMP_FAHRENHEIT,
     )
 
@@ -68,8 +68,7 @@ class AquantaWaterHeaderAvailablePercentageSensor(AquantaWaterHeaterSensor):
 
     entity_description = SensorEntityDescription(
         key = "hot_water_available",
-        device_class = "hot_water_available",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         native_unit_of_measurement = PERCENTAGE,
     )
 

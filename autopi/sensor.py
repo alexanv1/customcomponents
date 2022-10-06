@@ -1,11 +1,10 @@
 from datetime import timedelta
 
 from homeassistant.components.sensor import (
-    STATE_CLASS_MEASUREMENT,
-    DEVICE_CLASS_TEMPERATURE,
-    DEVICE_CLASS_VOLTAGE,
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 
 from homeassistant.const import (
@@ -56,7 +55,8 @@ class AutoPISpeedSensor(AutoPISensor):
 
     entity_description = SensorEntityDescription(
         key = "speed",
-        state_class = STATE_CLASS_MEASUREMENT,
+        device_class = SensorDeviceClass.SPEED,
+        state_class = SensorStateClass.MEASUREMENT,
         native_unit_of_measurement = SPEED_MILES_PER_HOUR
     )
 
@@ -83,7 +83,7 @@ class AutoPIRPMSensor(AutoPISensor):
 
     entity_description = SensorEntityDescription(
         key = "rpm",
-        state_class = STATE_CLASS_MEASUREMENT
+        state_class = SensorStateClass.MEASUREMENT
     )
 
     def __init__(self, device):
@@ -109,7 +109,7 @@ class AutoPIFuelSensor(AutoPISensor):
 
     entity_description = SensorEntityDescription(
         key = "fuel_level",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         native_unit_of_measurement = PERCENTAGE
     )
 
@@ -136,8 +136,8 @@ class AutoPICoolantTemperatureSensor(AutoPISensor):
 
     entity_description = SensorEntityDescription(
         key = "coolant_temperature",
-        device_class = DEVICE_CLASS_TEMPERATURE,
-        state_class = STATE_CLASS_MEASUREMENT,
+        device_class = SensorDeviceClass.TEMPERATURE,
+        state_class = SensorStateClass.MEASUREMENT,
         native_unit_of_measurement = TEMP_CELSIUS,
     )
 
@@ -164,7 +164,8 @@ class AutoPIBatteryLevelSensor(AutoPISensor):
 
     entity_description = SensorEntityDescription(
         key = "battery_level",
-        state_class = STATE_CLASS_MEASUREMENT,
+        device_class = SensorDeviceClass.BATTERY,
+        state_class = SensorStateClass.MEASUREMENT,
         native_unit_of_measurement = PERCENTAGE
     )
 
@@ -191,8 +192,8 @@ class AutoPIBatteryVoltageSensor(AutoPISensor):
 
     entity_description = SensorEntityDescription(
         key = "battery_voltage",
-        device_class = DEVICE_CLASS_VOLTAGE,
-        state_class = STATE_CLASS_MEASUREMENT,
+        device_class = SensorDeviceClass.VOLTAGE,
+        state_class = SensorStateClass.MEASUREMENT,
         native_unit_of_measurement = ELECTRIC_POTENTIAL_VOLT,
     )
 

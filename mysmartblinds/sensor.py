@@ -1,11 +1,10 @@
 import logging
 
 from homeassistant.components.sensor import (
-    DEVICE_CLASS_BATTERY,
-    DEVICE_CLASS_SIGNAL_STRENGTH,
-    STATE_CLASS_MEASUREMENT,
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS_MILLIWATT
 from homeassistant.core import HomeAssistant
@@ -59,8 +58,8 @@ class MySmartBlindBatterySensor(MySmartBlindSensor):
     entity_description = SensorEntityDescription(
         key="battery",
         name="Battery",
-        device_class=DEVICE_CLASS_BATTERY,
-        state_class=STATE_CLASS_MEASUREMENT,
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
     )
 
@@ -97,8 +96,8 @@ class MySmartBlindRssiSensor(MySmartBlindSensor):
     entity_description = SensorEntityDescription(
         key="rssi",
         name="RSSI",
-        device_class=DEVICE_CLASS_SIGNAL_STRENGTH,
-        state_class=STATE_CLASS_MEASUREMENT,
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     )
 

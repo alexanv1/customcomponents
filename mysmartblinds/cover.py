@@ -2,10 +2,10 @@ import logging
 
 from homeassistant.const import (ATTR_BATTERY_LEVEL)
 from homeassistant.components.cover import (
+    CoverDeviceClass,
     CoverEntity,
     CoverEntityFeature,
     ATTR_POSITION,
-    DEVICE_CLASS_BLIND
 )
 from homeassistant.components.group.cover import CoverGroup
 from homeassistant.core import HomeAssistant
@@ -63,8 +63,8 @@ class MySmartBlindCover(CoverEntity):
         return self._blind.name
 
     @property
-    def device_class(self):
-        return DEVICE_CLASS_BLIND
+    def device_class(self) -> CoverDeviceClass:
+        return CoverDeviceClass.BLIND
 
     @property
     def unique_id(self):

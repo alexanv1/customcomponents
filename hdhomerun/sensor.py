@@ -6,7 +6,6 @@ import requests
 from datetime import timedelta
 
 from homeassistant.components.sensor import (
-    STATE_CLASS_MEASUREMENT,
     SensorEntity,
     SensorEntityDescription,
 )

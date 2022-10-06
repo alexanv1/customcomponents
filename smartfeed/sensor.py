@@ -6,10 +6,10 @@ from dateutil import tz
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components.sensor import (
-    DEVICE_CLASS_BATTERY,
-    STATE_CLASS_MEASUREMENT,
+    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE
 
@@ -58,8 +58,8 @@ class SmartFeedBatterySensor(SmartFeedSensor):
     entity_description = SensorEntityDescription(
         key="backup_battery",
         name="Battery Backup",
-        device_class=DEVICE_CLASS_BATTERY,
-        state_class=STATE_CLASS_MEASUREMENT,
+        device_class=SensorDeviceClass.BATTERY,
+        state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
     )
 
@@ -72,7 +72,7 @@ class SmartFeedLastFeedingSensor(SmartFeedSensor):
     entity_description = SensorEntityDescription(
         key="last_feeding",
         name="Last Feeding",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, feeder):
