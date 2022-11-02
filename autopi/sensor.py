@@ -9,6 +9,7 @@ from homeassistant.components.sensor import (
 
 from homeassistant.const import (
     PERCENTAGE,
+    REVOLUTIONS_PER_MINUTE,
     SPEED_MILES_PER_HOUR,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
@@ -83,7 +84,8 @@ class AutoPIRPMSensor(AutoPISensor):
 
     entity_description = SensorEntityDescription(
         key = "rpm",
-        state_class = SensorStateClass.MEASUREMENT
+        state_class = SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement = REVOLUTIONS_PER_MINUTE
     )
 
     def __init__(self, device):

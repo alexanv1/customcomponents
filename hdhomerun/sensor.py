@@ -2,7 +2,6 @@
 Simple sensor platform for HDHomeRun devices
 """
 
-import requests
 from datetime import timedelta
 
 from homeassistant.components.sensor import (
@@ -11,70 +10,21 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.util import slugify
 
-from . import DOMAIN, CONF_HOSTNAME
+from . import DOMAIN, HDHomeRunDevice
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up of the HDHomeRun device."""
 
-    global HEADERS
-    global API_TOKEN
-
-    hostname = config_entry.data[CONF_HOSTNAME]
-    device = HDHomeRunDevice(hostname)
-
-    # Get device info
-    await hass.async_add_executor_job(device.update)
+    device = hass.data[DOMAIN]
 
     sensors = [HDHomeRunInfoSensor(device)]
     for tuner_index in range(device.number_of_tuners):
         sensors += [HDHomeRunTunerSensor(device, tuner_index)]
 
-    async_add_entities(sensors)       
+    async_add_entities(sensors)
 
-class HDHomeRunDevice:
-
-    def __init__(self, hostname : str):
-        self._hostname = hostname
-        self._device_data = {}
-        self._tuner_status = []
-
-    @property
-    def device_uri(self):
-        return f"http://{self._hostname}/discover.json"
-
-    @property
-    def status_uri(self):
-        return f"http://{self._hostname}/status.json"
-
-    @property
-    def device_data(self):
-        return self._device_data
-
-    @property
-    def number_of_tuners(self):
-        return self._device_data["TunerCount"]
-
-    @property
-    def hostname(self):
-        return self._hostname
-
-    def send_request(self, uri : str) -> str:
-        resp = requests.get(uri)
-        if resp.status_code != 200:
-            # Something went wrong
-            raise Exception('GET {} failed with status {}, error: {}'.format(uri, resp.status_code, resp.json()["error"]))
-
-        return resp.json()
-
-    def update(self):
-        self._device_data = self.send_request(self.device_uri)
-        self._tuner_status = self.send_request(self.status_uri)
-
-    def get_tuner_status(self, tuner_index : int):
-        # Parse the tuner data for the given index
-        return [x for x in self._tuner_status if x["Resource"] == f"tuner{tuner_index}"][0]
 
 class HDHomeRunSensor(SensorEntity):
 
@@ -83,12 +33,7 @@ class HDHomeRunSensor(SensorEntity):
 
     @property
     def device_info(self):
-        return {
-            "name": self._device.device_data['FriendlyName'],
-            "identifiers": {(DOMAIN, slugify(self._device.hostname))},
-            "model": self._device.device_data['ModelNumber'],
-            "manufacturer": "Silicon Dust",
-        }
+        return self._device.device_info
 
     @property
     def name(self):
@@ -148,9 +93,6 @@ class HDHomeRunTunerSensor(HDHomeRunSensor):
             key=f"tuner_{self._tuner_index + 1}_status",
             name=f"Tuner {self._tuner_index + 1} Status",
         )
-
-    def update(self):
-        self._device.update()
 
     @property
     def native_value(self) -> str:
