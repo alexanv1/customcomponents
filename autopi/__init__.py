@@ -228,10 +228,16 @@ class AutoPiDevice():
                 _LOGGER.debug(f'{self._vehicle_name} - received {url} response, json = {response_json}')
 
                 hass_attribute_name = hass_attribute_names[attribute]
+                attribute_value = response_json[0]["value"]
+
                 if hass_attribute_name == ATTR_SPEED:
                     # Convert to MPH
-                    self._attributes[hass_attribute_name] = response_json[0]["value"] / 1.61
+                    self._attributes[ATTR_SPEED] = attribute_value / 1.61
+                elif hass_attribute_name == ATTR_FUEL_LEVEL:
+                    # Keep previous fuel level value if newly reported value is 0 (which is what the API sometimes returns when the engine is off)
+                    if int(attribute_value) != 0 or ATTR_FUEL_LEVEL not in self._attributes.keys():
+                        self._attributes[ATTR_FUEL_LEVEL] = attribute_value
                 else:
-                    self._attributes[hass_attribute_name] = response_json[0]["value"]
+                    self._attributes[hass_attribute_name] = attribute_value
             else:
                 _LOGGER.error(f'{self._vehicle_name} - getting attributes failed. Response status = {response.status}, response = {await response.text()}')
