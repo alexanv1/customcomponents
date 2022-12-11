@@ -6,7 +6,7 @@ from homeassistant.components.water_heater import (
 )
 from homeassistant.const import (
     PRECISION_WHOLE,
-    TEMP_FAHRENHEIT,
+    UnitOfTemperature,
     ATTR_TEMPERATURE,
 )
 
@@ -34,7 +34,7 @@ class AquantaWaterHeaterEntity(WaterHeaterEntity):
 
     @property
     def temperature_unit(self):
-        return TEMP_FAHRENHEIT
+        return UnitOfTemperature.FAHRENHEIT
 
     @property
     def precision(self):

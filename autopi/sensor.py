@@ -10,10 +10,10 @@ from homeassistant.components.sensor import (
 from homeassistant.const import (
     PERCENTAGE,
     REVOLUTIONS_PER_MINUTE,
-    SPEED_MILES_PER_HOUR,
+    UnitOfSpeed,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
-    TEMP_CELSIUS,
+    UnitOfTemperature,
     ELECTRIC_POTENTIAL_VOLT
 )
 
@@ -58,7 +58,7 @@ class AutoPISpeedSensor(AutoPISensor):
         key = "speed",
         device_class = SensorDeviceClass.SPEED,
         state_class = SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement = SPEED_MILES_PER_HOUR
+        native_unit_of_measurement = UnitOfSpeed.MILES_PER_HOUR
     )
 
     def __init__(self, device):
@@ -140,7 +140,7 @@ class AutoPICoolantTemperatureSensor(AutoPISensor):
         key = "coolant_temperature",
         device_class = SensorDeviceClass.TEMPERATURE,
         state_class = SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement = TEMP_CELSIUS,
+        native_unit_of_measurement = UnitOfTemperature.CELSIUS,
     )
 
     def __init__(self, device):

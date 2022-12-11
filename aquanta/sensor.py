@@ -7,7 +7,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
-from homeassistant.const import PERCENTAGE, PRECISION_WHOLE, TEMP_FAHRENHEIT
+from homeassistant.const import PERCENTAGE, PRECISION_WHOLE, UnitOfTemperature
 
 from . import DOMAIN, AquantaWaterHeater
 
@@ -42,7 +42,7 @@ class AquantaWaterHeaterTemperatureSensor(AquantaWaterHeaterSensor):
         key = "current_temperature",
         device_class = SensorDeviceClass.TEMPERATURE,
         state_class = SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement = TEMP_FAHRENHEIT,
+        native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT,
     )
 
     def __init__(self, device):
