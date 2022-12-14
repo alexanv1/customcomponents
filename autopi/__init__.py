@@ -22,6 +22,7 @@ SKIP_ATTRIBUTE_UPDATE_MAX = 5
 
 API_BASE_URL = "https://api.autopi.io"
 API_LOGIN_URL = f"{API_BASE_URL}/auth/login/"
+API_DEVICES_URL = f"{API_BASE_URL}/dongle/devices/"
 API_POSITION_URL = f"{API_BASE_URL}/logbook/v2/most_recent_position/?device_id="
 API_STORAGE_READ_URL = f"{API_BASE_URL}/logbook/storage/read/?device_id="
 
@@ -72,7 +73,16 @@ async def get_devices(username, password):
                 _LOGGER.info(f'Received login response json = {login_response_json}')
 
                 _HEADERS = {'Authorization': f'Bearer {login_response_json["token"]}' }
-                return login_response_json["user"]["devices"]
+
+        async with session.get(API_DEVICES_URL, headers = _HEADERS) as devices_response:
+
+            if devices_response.status != 200:
+                _LOGGER.error(f'Getting Devices Failed, status = {devices_response.status}, response = "{await devices_response.text()}"')
+                devices_response.raise_for_status()
+            else:
+                devices_response_json = await devices_response.json()
+                _LOGGER.info(f'Received get devices response json = {devices_response_json}')
+                return devices_response_json["results"]
 
 class AutoPiDevice():
     """ AutoPi Device Tracker """
