@@ -37,7 +37,7 @@ class HDHomeRunSensor(SensorEntity):
 
     @property
     def name(self):
-        return f'HDHomeRun Prime {self.entity_description.name}'
+        return f'HDHomeRun {self.entity_description.name}'
 
     @property
     def unique_id(self):

@@ -40,7 +40,7 @@ class HDHomeRunUpdate(UpdateEntity):
 
     @property
     def name(self):
-        return f'HDHomeRun Prime Firmware'
+        return f'HDHomeRun Firmware'
 
     @property
     def unique_id(self):
