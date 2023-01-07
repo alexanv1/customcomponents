@@ -76,7 +76,7 @@ class HDHomeRunInfoSensor(HDHomeRunSensor):
             "UpgradeAvailable": upgrade_available,
             "BaseURL": self._device.device_data["BaseURL"],
             "LineupURL": self._device.device_data["LineupURL"],
-            "ConditionalAccess": self._device.device_data["ConditionalAccess"],
+            "ConditionalAccess": self._device.device_data["ConditionalAccess"] if ("ConditionalAccess" in self._device.device_data) else "",
         }
     
     @property
