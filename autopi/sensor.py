@@ -13,8 +13,8 @@ from homeassistant.const import (
     UnitOfSpeed,
     PRECISION_TENTHS,
     PRECISION_WHOLE,
+    UnitOfElectricPotential,
     UnitOfTemperature,
-    ELECTRIC_POTENTIAL_VOLT
 )
 
 from . import DOMAIN, AutoPiDevice
@@ -196,7 +196,7 @@ class AutoPIBatteryVoltageSensor(AutoPISensor):
         key = "battery_voltage",
         device_class = SensorDeviceClass.VOLTAGE,
         state_class = SensorStateClass.MEASUREMENT,
-        native_unit_of_measurement = ELECTRIC_POTENTIAL_VOLT,
+        native_unit_of_measurement = UnitOfElectricPotential.VOLT,
     )
 
     def __init__(self, device):
