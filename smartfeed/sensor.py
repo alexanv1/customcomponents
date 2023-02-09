@@ -72,7 +72,6 @@ class SmartFeedLastFeedingSensor(SmartFeedSensor):
     entity_description = SensorEntityDescription(
         key="last_feeding",
         name="Last Feeding",
-        state_class=SensorStateClass.MEASUREMENT,
     )
 
     def __init__(self, feeder):

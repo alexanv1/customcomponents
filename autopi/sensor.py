@@ -45,10 +45,6 @@ class AutoPISensor(SensorEntity):
         return self._device.device_info
 
     @property
-    def precision(self):
-        return PRECISION_WHOLE
-
-    @property
     def should_poll(self):
         return True
 
@@ -209,10 +205,6 @@ class AutoPIBatteryVoltageSensor(AutoPISensor):
     @property
     def unique_id(self):
         return f"{self._device.unique_id}_battery_voltage"
-
-    @property
-    def precision(self):
-        return PRECISION_TENTHS
 
     @property
     def native_value(self):
