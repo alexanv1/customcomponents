@@ -8,6 +8,7 @@ import asyncio
 import socketio
 from datetime import datetime
 from datetime import timedelta
+from typing import Any, Optional
 
 from homeassistant.components.fan import (FanEntity, FanEntityFeature)
 
@@ -162,8 +163,10 @@ class MoodoDevice(FanEntity):
 
     async def async_turn_on(
         self,
-        percentage: int = None,
-        **kwargs,
+        speed: Optional[str] = None,
+        percentage: Optional[int] = None,
+        preset_mode: Optional[str] = None, 
+        **kwargs: Any
     ) -> None:
 
         fan_volume = self._fan_volume
