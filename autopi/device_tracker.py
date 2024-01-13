@@ -3,8 +3,7 @@ Support for AutoPi device tracking.
 """
 from datetime import timedelta
 
-from homeassistant.components.device_tracker import SOURCE_TYPE_GPS
-from homeassistant.components.device_tracker.config_entry import TrackerEntity
+from homeassistant.components.device_tracker import SourceType, TrackerEntity
 
 from . import DOMAIN, AutoPiDevice
 
@@ -40,8 +39,9 @@ class AutoPiDeviceTracker(TrackerEntity):
         return "mdi:car"
 
     @property
-    def source_type(self):
-        return SOURCE_TYPE_GPS
+    def source_type(self) -> SourceType:
+        """Return the source type of the device."""
+        return SourceType.GPS
 
     @property
     def latitude(self):
