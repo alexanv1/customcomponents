@@ -37,6 +37,7 @@ API_BOOST_MODE_OFF = f"{API_BASE_URL}/set/schedule/boost/off"
 
 OPERATION_MODE_NORMAL = 'Normal'
 OPERATION_MODE_BOOST = 'Boost'
+OPERATION_MODE_AWAY = 'Away'
 
 CONTROL_MODE_INTELLIGENCE = "Aquanta Intelligence"
 CONTROL_MODE_TEMPERATURE = "Set Temperature"
@@ -194,15 +195,22 @@ class AquantaWaterHeater():
         self.check_login()
 
         if operation_mode == OPERATION_MODE_BOOST:
-            if self.is_away_mode_on:
-                # Turn off away mode first
-                self.set_away_mode(False)
+            self.set_away_mode(False)
 
             response = self._session.put(API_BOOST_MODE_ON, data=self.get_schedule_dictionary())
             _LOGGER.info(f'Boost mode turned on. Received {API_AWAY_MODE_ON} response, status = {response.status_code}')
+
+        elif operation_mode == OPERATION_MODE_AWAY:
+            response = self._session.put(API_BOOST_MODE_OFF)
+            _LOGGER.info(f'Boost mode turned off. Received {API_BOOST_MODE_OFF} response, status = {response.status_code}')
+
+            self.set_away_mode(True)
+            
         else:
             response = self._session.put(API_BOOST_MODE_OFF)
             _LOGGER.info(f'Boost mode turned off. Received {API_BOOST_MODE_OFF} response, status = {response.status_code}')
+
+            self.set_away_mode(False)
 
         check_response(response)
 
@@ -245,9 +253,6 @@ class AquantaWaterHeater():
             response = self._session.put(API_AWAY_MODE_ON, data=self.get_schedule_dictionary())
             _LOGGER.info(f'Away mode turned on. Received {API_AWAY_MODE_ON} response, status = {response.status_code}')
             check_response(response)
-
-            # Also turn off Boost
-            self.set_operation_mode(OPERATION_MODE_NORMAL)
         else:
             response = self._session.put(API_AWAY_MODE_OFF)
             _LOGGER.info(f'Away mode turned off. Received {API_AWAY_MODE_OFF} response, status = {response.status_code}')

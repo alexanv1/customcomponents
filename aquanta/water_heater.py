@@ -10,7 +10,7 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
 )
 
-from . import DOMAIN, OPERATION_MODE_NORMAL, OPERATION_MODE_BOOST, AquantaWaterHeater
+from . import DOMAIN, OPERATION_MODE_NORMAL, OPERATION_MODE_BOOST, OPERATION_MODE_AWAY, AquantaWaterHeater
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
@@ -52,16 +52,18 @@ class AquantaWaterHeaterEntity(WaterHeaterEntity):
     def current_operation(self):
         if self._device.state["boostRunning"]:
             return OPERATION_MODE_BOOST
+        elif self._device.is_away_mode_on:
+            return OPERATION_MODE_AWAY
 
         return OPERATION_MODE_NORMAL
 
     @property
     def operation_list(self):
-        return [OPERATION_MODE_NORMAL, OPERATION_MODE_BOOST]
+        return [OPERATION_MODE_NORMAL, OPERATION_MODE_BOOST, OPERATION_MODE_AWAY]
 
     @property
     def supported_features(self):
-        features =  WaterHeaterEntityFeature.AWAY_MODE | WaterHeaterEntityFeature.OPERATION_MODE
+        features =  WaterHeaterEntityFeature.OPERATION_MODE
         if (not self._device.aquanta_intelligence_active):
             features |= WaterHeaterEntityFeature.TARGET_TEMPERATURE
 
@@ -69,9 +71,6 @@ class AquantaWaterHeaterEntity(WaterHeaterEntity):
 
     @property
     def state(self):
-        if (self.is_away_mode_on):
-            return "Away"
-
         return self.current_operation
 
     @property
@@ -94,10 +93,6 @@ class AquantaWaterHeaterEntity(WaterHeaterEntity):
         return 140
 
     @property
-    def is_away_mode_on(self):
-        return self._device.is_away_mode_on
-
-    @property
     def name(self):
         return self._device.name
 
@@ -115,12 +110,6 @@ class AquantaWaterHeaterEntity(WaterHeaterEntity):
 
     def set_operation_mode(self, operation_mode):
         self._device.set_operation_mode(operation_mode)
-
-    def turn_away_mode_on(self):
-        self._device.set_away_mode(True)
-
-    def turn_away_mode_off(self):
-        self._device.set_away_mode(False)
 
     def update(self):
         self._device.update()
