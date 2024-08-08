@@ -298,7 +298,7 @@ class MoodoDevice(FanEntity):
 
     @property
     def supported_features(self):
-        return FanEntityFeature.SET_SPEED
+        return FanEntityFeature.SET_SPEED | FanEntityFeature.TURN_OFF | FanEntityFeature.TURN_ON
 
     @property
     def icon(self):
