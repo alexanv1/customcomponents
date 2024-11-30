@@ -5,7 +5,7 @@ Simple platform to control Moodo Aroma Diffuser devices
 import logging
 import aiohttp
 import asyncio
-import socketio
+import socketio_v4 as socketio
 from datetime import datetime
 from datetime import timedelta
 from typing import Any, Optional

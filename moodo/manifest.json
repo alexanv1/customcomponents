@@ -5,8 +5,8 @@
     "config_flow": true,
     "documentation": "https://rest.moodo.co/",
     "requirements": [
-      "python-engineio==3.13.1",
-      "python-socketio==4.6.0",
+      "python-engineio-v3==3.14.2",
+      "python-socketio-v4==4.6.1",
       "websocket-client==0.57.0"
     ],
     "dependencies": [],
